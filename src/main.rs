@@ -99,11 +99,13 @@ struct State {
 
     // UNIFORMS
     camera: Camera,
-    last_tick: std::time::Instant,
     view_uniforms: ViewUniforms,
-    delta: f32,
     view_uniform_buffer: wgpu::Buffer,
     view_uniform_bind_group: wgpu::BindGroup,
+
+    // TIME
+    last_tick: std::time::Instant,
+    delta: f32,
 
     // BACKGROUND
     render_pipeline: wgpu::RenderPipeline,
@@ -472,11 +474,13 @@ impl State {
 
             // UNIFORMS
             camera,
-            last_tick: std::time::Instant::now(),
             view_uniforms,
-            delta,
             view_uniform_buffer,
             view_uniform_bind_group,
+
+            // TIME
+            last_tick: std::time::Instant::now(),
+            delta,
 
             // BACKGROUND
             render_pipeline,
@@ -521,6 +525,7 @@ impl State {
                 self.pause = !self.pause;
             }
 
+            // Moving around the camera
             {
                 let mut cam_pos_delta = glam::Vec2::zero();
                 if self.input.key_held(VirtualKeyCode::A) {
@@ -542,6 +547,7 @@ impl State {
                 }
             }
 
+            // Zooming the camera
             {
                 let scroll_diff = self.input.scroll_diff();
                 if scroll_diff != 0.0 {
