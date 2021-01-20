@@ -1,0 +1,16 @@
+[package]
+name = "too_many_dimensions"
+version = "0.1.0"
+authors = ["Sean Moulton <bananamoulton@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+bytemuck = "1.4.1"
+futures = "0.3.9"
+glam = "0.12.0"
+rand = "0.8.1"
+rand_xorshift = "0.3.0"
+shaderc = "0.7.0"
+wgpu = "0.6.2"
+winit = "0.24.0"
+winit_input_helper = "0.9.0"

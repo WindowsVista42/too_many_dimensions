@@ -1,0 +1,33 @@
+#version 450
+
+#define NUM_FLOW 5000
+
+layout(local_size_x = 64) in;
+
+struct Particle {
+    vec2 pos;
+    vec2 vel;
+};
+layout(set = 0, binding = 0) uniform FlowSim {
+    float u_dt;
+};
+layout(set = 0, binding = 1) buffer SrcParticles {
+    Particle particles[NUM_FLOW];
+} src;
+layout(set = 0, binding = 2) buffer DstParticles {
+    Particle particles[NUM_FLOW];
+} dst;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx > NUM_FLOW) { return; }
+    vec2 vpos = src.particles[idx].pos;
+    vpos += vec2(u_dt * 0.1);
+
+    if (vpos.x < -1.0) vpos.x = 1.0;
+    if (vpos.x > 1.0) vpos.x = -1.0;
+    if (vpos.y < -1.0) vpos.y = 1.0;
+    if (vpos.y > 1.0) vpos.y = -1.0;
+
+    dst.particles[idx].pos = vpos;
+}
