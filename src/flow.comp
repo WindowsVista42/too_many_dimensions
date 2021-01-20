@@ -22,7 +22,7 @@ void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx > NUM_FLOW) { return; }
     vec2 vpos = src.particles[idx].pos;
-    vpos += vec2(u_dt * 0.1);
+    vpos += vec2(u_dt);
 
     if (vpos.x < -1.0) vpos.x = 1.0;
     if (vpos.x > 1.0) vpos.x = -1.0;
