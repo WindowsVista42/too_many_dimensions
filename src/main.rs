@@ -51,7 +51,7 @@ fn main() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
-        .with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
+        //.with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
         .build(&event_loop)
         .unwrap();
     let mut state = block_on(State::new(&window));
@@ -172,11 +172,15 @@ impl State {
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         // SHADER LOADING
-        let vs_module = device.create_shader_module(wgpu::include_spirv!("vertex.vert.spv"));
-        let fs_module = device.create_shader_module(wgpu::include_spirv!("fragment.frag.spv"));
-        let flow_cs_module = device.create_shader_module(wgpu::include_spirv!("flow.comp.spv"));
-        let flow_vs_module = device.create_shader_module(wgpu::include_spirv!("flowvert.vert.spv"));
-        let flow_fs_module = device.create_shader_module(wgpu::include_spirv!("flowfrag.frag.spv"));
+        let vs_module = device.create_shader_module(wgpu::include_spirv!("../spirv/vertex.vert.spv"));
+        let fs_module =
+            device.create_shader_module(wgpu::include_spirv!("../spirv/fragment.frag.spv"));
+        let flow_cs_module =
+            device.create_shader_module(wgpu::include_spirv!("../spirv/flow.comp.spv"));
+        let flow_vs_module =
+            device.create_shader_module(wgpu::include_spirv!("../spirv/flowvert.vert.spv"));
+        let flow_fs_module =
+            device.create_shader_module(wgpu::include_spirv!("../spirv/flowfrag.frag.spv"));
 
         // UNIFORMS
         let camera = Camera {
