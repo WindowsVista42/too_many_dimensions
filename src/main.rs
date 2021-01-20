@@ -521,7 +521,9 @@ impl State {
         if self.input.update(event) {
             if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
                 self.quit = true;
-            } else if self.input.key_pressed(VirtualKeyCode::Space) {
+                return;
+            }
+            if self.input.key_pressed(VirtualKeyCode::Space) {
                 self.pause = !self.pause;
             }
 
