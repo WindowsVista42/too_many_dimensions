@@ -1,3 +1,5 @@
+#![feature(destructuring_assignment)]
+
 mod datatypes;
 use datatypes::*;
 
