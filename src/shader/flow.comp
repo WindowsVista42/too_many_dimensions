@@ -1,6 +1,6 @@
 #version 450
 
-#define NUM_FLOW 100000
+#define NUM_FLOW 1000000
 #define EXT 6.0
 #define INNER_EXT 2.0
 #define MAX_SPEED 0.5
@@ -8,7 +8,7 @@
 #define INNER_ACCEL 1.5
 #define PI 3.141592653589793238
 #define SCALE 0.5
-#define OFFSET vec2(0.0, 0.0)
+#define OFFSET vec2(123123.0, 9834.0)
 
 float mag(vec2 v) {
     return sqrt(v.x*v.x + v.y+v.y);
@@ -85,30 +85,32 @@ void main() {
     vec2 vvel = src[idx].vel;
 
     vec2 vdir;
+    /*
     if (vpos.x <  INNER_EXT &&
         vpos.x > -INNER_EXT &&
         vpos.y <  INNER_EXT &&
         vpos.y > -INNER_EXT
     ) {
         vvel += vec2(-MAX_SPEED, -MAX_SPEED) * u_dt * INNER_ACCEL;
-    } else {
+    } if {
+    */
         float dir = snoise(vpos * SCALE + OFFSET) * PI * 2.0;// 0 -> 2pi
         vdir = vec2(sin(dir), cos(dir));
         vvel += vdir * ACCEL * u_dt;
-    }
+    //}
 
-    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 2.0 * u_dt;
+    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * u_dt;
     vpos += vvel * u_dt;
 
-    if (vvel.x > MAX_SPEED) vvel.x = MAX_SPEED;
+    if      (vvel.x >  MAX_SPEED) vvel.x =  MAX_SPEED;
     else if (vvel.x < -MAX_SPEED) vvel.x = -MAX_SPEED;
-    if (vvel.y > MAX_SPEED) vvel.y = MAX_SPEED;
+    if      (vvel.y >  MAX_SPEED) vvel.y =  MAX_SPEED;
     else if (vvel.y < -MAX_SPEED) vvel.y = -MAX_SPEED;
 
-    if      (vpos.x < -EXT) vpos.x =  EXT;
-    else if (vpos.x >  EXT) vpos.x = -EXT;
-    else if (vpos.y < -EXT) vpos.y =  EXT;
-    else if (vpos.y >  EXT) vpos.y = -EXT;
+    if (vpos.x < -EXT) vpos.x =  EXT;
+    if (vpos.x >  EXT) vpos.x = -EXT;
+    if (vpos.y < -EXT) vpos.y =  EXT;
+    if (vpos.y >  EXT) vpos.y = -EXT;
 
     dst[idx].pos = vpos;
     dst[idx].vel = vvel;
