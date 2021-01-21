@@ -27,9 +27,12 @@ impl ShaderData {
 
         let src = read_to_string(src_path.clone())?;
         let spv_path = src_path
-            .parent().unwrap()
-            .parent().unwrap()
-            .parent().unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
             .join("spirv")
             .join(
                 src_path
