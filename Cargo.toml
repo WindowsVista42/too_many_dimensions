@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Sean Moulton <bananamoulton@gmail.com>"]
 edition = "2018"
 
+[profile.release]
+# lto = true
+
 [build-dependencies]
 anyhow = "1.0.38"
 fs_extra = "1.2.0"
