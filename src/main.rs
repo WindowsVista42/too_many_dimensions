@@ -6,7 +6,7 @@ use datatypes::*;
 use futures::executor::block_on;
 use wgpu::util::DeviceExt;
 use wgpu::ProgrammableStageDescriptor;
-use winit::event::{Event, VirtualKeyCode, WindowEvent};
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
@@ -47,13 +47,13 @@ const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
 
 const FLOW_SHAPE_INDICES: [u16; 6] = [0, 1, 2, 0, 2, 3];
 
-const NUM_FLOW: usize = 100_000;
+const NUM_FLOW: usize = 1_000_000;
 
 fn main() {
     let event_loop = EventLoop::new();
+    let mut fullscreen = false;
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
-        //.with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
         .build(&event_loop)
         .unwrap();
     let mut state = block_on(State::new(&window));
@@ -66,6 +66,29 @@ fn main() {
         }
 
         match event {
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Released,
+                                virtual_keycode: Some(VirtualKeyCode::Return),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                if state.input.held_alt() {
+                    if fullscreen {
+                        window.set_fullscreen(None);
+                        fullscreen = false;
+                    } else {
+                        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+                        fullscreen = true;
+                    }
+                }
+            }
             Event::RedrawRequested(_) => {
                 state.render();
             }
@@ -90,7 +113,7 @@ struct State {
     // FLAGS
     quit: bool,
     pause: bool,
-    dbuf: usize,
+    buf_idx: usize, // Buffer idx for compute
 
     // INSTANCE
     surface: wgpu::Surface,
@@ -144,7 +167,7 @@ impl State {
         // FLAGS
         let quit = false;
         let pause = false;
-        let dbuf = 0;
+        let buf_idx = 0;
 
         // INSTANCE
         let size = window.inner_size();
@@ -493,7 +516,7 @@ impl State {
             // FLAGS
             quit,
             pause,
-            dbuf,
+            buf_idx,
 
             // INSTANCE
             surface,
@@ -538,7 +561,7 @@ impl State {
             frame_num: 0,
         };
 
-        s.create_render_bundles();
+        s.create_render_bundle();
         s.create_multisampled_framebuffer();
 
         s
@@ -570,7 +593,7 @@ impl State {
         }
     }
 
-    fn create_render_bundles(&mut self) {
+    fn create_render_bundle(&mut self) {
         self.render_bundle = Some({
             let mut rpass =
                 self.device
@@ -653,11 +676,11 @@ impl State {
                 &mut self.flow_buffers[0].slice(..),
                 &mut self.flow_buffers[1].slice(..),
             ); // Swap buffers for rendering
-            self.dbuf ^= 1; // Swap idx for compute
+            self.buf_idx ^= 1;
 
             let mut cpass = encoder.begin_compute_pass();
             cpass.set_pipeline(&self.flow_compute_pipeline);
-            cpass.set_bind_group(0, &self.flow_bind_groups[self.dbuf], &[]);
+            cpass.set_bind_group(0, &self.flow_bind_groups[self.buf_idx], &[]);
             cpass.dispatch(self.flow_work_group_count, 1, 1);
         }
 
