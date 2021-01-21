@@ -527,35 +527,10 @@ impl State {
                 self.pause = !self.pause;
             }
 
-            // Moving around the camera
-            {
-                let mut cam_pos_delta = glam::Vec2::zero();
-                if self.input.key_held(VirtualKeyCode::A) {
-                    cam_pos_delta[0] -= 1.0;
-                }
-                if self.input.key_held(VirtualKeyCode::D) {
-                    cam_pos_delta[0] += 1.0;
-                }
-                if self.input.key_held(VirtualKeyCode::S) {
-                    cam_pos_delta[1] -= 1.0;
-                }
-                if self.input.key_held(VirtualKeyCode::W) {
-                    cam_pos_delta[1] += 1.0;
-                }
-                if cam_pos_delta != glam::Vec2::zero() {
-                    cam_pos_delta = cam_pos_delta.normalize() * self.delta;
-                    self.camera.pos += cam_pos_delta;
-                    self.update_view_uniforms();
-                }
-            }
-
-            // Zooming the camera
-            {
-                let scroll_diff = self.input.scroll_diff();
-                if scroll_diff != 0.0 {
-                    self.camera.scl += scroll_diff * 0.1;
-                    self.update_view_uniforms();
-                }
+            self.camera.update(&self.input, self.delta);
+            if self.camera.changed {
+                self.update_view_uniforms();
+                self.camera.changed = false;
             }
         }
     }
