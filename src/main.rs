@@ -29,6 +29,7 @@ fn main() {
         .with_title("Too Many Dimensions")
         .build(&event_loop)
         .unwrap();
+    window.set_cursor_visible(false);
 
     let mut state = block_on(State::new(&window));
 
@@ -84,7 +85,6 @@ struct State {
     quit: bool,
     pause: bool,
     fullscreen: bool, // Modified externally
-    buf_idx: usize, // Buffer idx for compute
 
     // INSTANCE
     surface: wgpu::Surface,
@@ -114,6 +114,7 @@ struct State {
     flow_indices_buffer: wgpu::Buffer,
     flow_work_group_count: u32,
     flow_num_indices: u32,
+    buf_idx: usize, // Buffer idx for compute
 
     // BUILD AFTER SELF
     render_bundle: Option<wgpu::RenderBundle>,
@@ -142,7 +143,7 @@ impl State {
 
         // INSTANCE
         let size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
+        let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {

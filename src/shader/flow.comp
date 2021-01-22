@@ -8,7 +8,7 @@
 #define INNER_ACCEL 1.5
 #define PI 3.141592653589793238
 #define SCALE 0.5
-#define OFFSET vec2(123123.0, 9834.0)
+#define OFFSET vec2(123.0, 934.0)
 
 float mag(vec2 v) {
     return sqrt(v.x*v.x + v.y+v.y);
