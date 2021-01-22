@@ -12,9 +12,7 @@ use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
 const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
-    FlowVertex {
-        pos: [-0.01, -0.01],
-    },
+    FlowVertex { pos: [-0.01, -0.01] },
     FlowVertex { pos: [-0.01, 0.01] },
     FlowVertex { pos: [0.01, 0.01] },
     FlowVertex { pos: [0.01, -0.01] },
@@ -26,10 +24,12 @@ const NUM_FLOW: usize = 100_000;
 
 fn main() {
     let event_loop = EventLoop::new();
+
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
         .build(&event_loop)
         .unwrap();
+
     let mut state = block_on(State::new(&window));
 
     event_loop.run(move |event, _, control_flow| {
@@ -122,10 +122,12 @@ struct State {
     // WINDOW
     size: winit::dpi::PhysicalSize<u32>,
     frame_num: usize,
+    active: Option<usize>,
 }
 
 impl State {
     async fn new(window: &Window) -> State {
+
         // INPUT
         let input = WinitInputHelper::new();
 
@@ -140,7 +142,7 @@ impl State {
 
         // INSTANCE
         let size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
+        let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
         let surface = unsafe { instance.create_surface(window) };
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -463,6 +465,7 @@ impl State {
             // WINDOW
             size,
             frame_num: 0,
+            active: Some(0),
         };
 
         s.create_render_bundle();
@@ -535,6 +538,20 @@ impl State {
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
+
+        // Taken from the wgpu-rs "Water" example
+        if self.sc_desc.width == 0 && self.sc_desc.height == 0 {
+            // Stop rendering altogether.
+            self.active = None;
+            return;
+        } else {
+            // The next frame queued is the wrong size: (0, 0),
+            // so we skip a frame to avoid crashes where our
+            // textures are the correct (window) size, and the
+            // frame is still (0, 0).
+            self.active = Some(self.frame_num + 1);
+        }
+
         self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
         self.create_multisampled_framebuffer();
 
@@ -563,17 +580,13 @@ impl State {
     }
 
     fn render(&mut self) {
+        self.frame_num += 1;
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("RENDER ENCODER"),
             });
-
-        let frame = self
-            .swap_chain
-            .get_current_frame()
-            .expect("Timeout getting texture")
-            .output;
 
         if !self.pause {
             std::mem::swap(
@@ -587,6 +600,25 @@ impl State {
             cpass.set_bind_group(0, &self.flow_bind_groups[self.buf_idx], &[]);
             cpass.dispatch(self.flow_work_group_count, 1, 1);
         }
+
+        // Only render valid frames. See resize method.
+        if let Some(active) = self.active {
+            if active >= self.frame_num {
+                self.queue.submit(std::iter::once(encoder.finish()));
+                self.update_delta();
+                return;
+            }
+        } else {
+            self.queue.submit(std::iter::once(encoder.finish()));
+            self.update_delta();
+            return;
+        }
+
+        let frame = self
+            .swap_chain
+            .get_current_frame()
+            .expect("Timeout getting texture")
+            .output;
 
         {
             let ops = wgpu::Operations {
@@ -620,8 +652,7 @@ impl State {
             rpass.execute_bundles(&mut self.render_bundle.iter());
         }
 
-        self.frame_num += 1;
-        self.queue.submit(Some(encoder.finish()));
+        self.queue.submit(std::iter::once(encoder.finish()));
         self.update_delta();
     }
 
