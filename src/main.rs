@@ -22,11 +22,10 @@ const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
 
 const FLOW_SHAPE_INDICES: [u16; 6] = [0, 1, 2, 0, 2, 3];
 
-const NUM_FLOW: usize = 1_000_000;
+const NUM_FLOW: usize = 100_000;
 
 fn main() {
     let event_loop = EventLoop::new();
-    let mut fullscreen = false;
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
         .build(&event_loop)
@@ -51,12 +50,12 @@ fn main() {
                 }, ..
             } => {
                 if state.input.held_alt() {
-                    if fullscreen {
+                    if state.fullscreen {
                         window.set_fullscreen(None);
-                        fullscreen = false;
+                        state.fullscreen = false;
                     } else {
                         window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-                        fullscreen = true;
+                        state.fullscreen = true;
                     }
                 }
             }
@@ -84,6 +83,7 @@ struct State {
     // FLAGS
     quit: bool,
     pause: bool,
+    fullscreen: bool, // Modified externally
     buf_idx: usize, // Buffer idx for compute
 
     // INSTANCE
@@ -125,13 +125,17 @@ struct State {
 }
 
 impl State {
-    async fn new(window: &Window) -> Self {
+    async fn new(window: &Window) -> State {
         // INPUT
         let input = WinitInputHelper::new();
 
         // FLAGS
         let quit = false;
         let pause = false;
+        let fullscreen = match window.fullscreen() {
+            Some(_) => true,
+            None => false,
+        };
         let buf_idx = 0;
 
         // INSTANCE
@@ -163,7 +167,7 @@ impl State {
             format: wgpu::TextureFormat::Bgra8UnormSrgb,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: wgpu::PresentMode::Mailbox,
         };
 
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
@@ -421,6 +425,7 @@ impl State {
             // FLAGS
             quit,
             pause,
+            fullscreen,
             buf_idx,
 
             // INSTANCE
