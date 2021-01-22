@@ -2,6 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
+/*
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
@@ -30,6 +31,7 @@ impl Vertex {
         }
     }
 }
+*/
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -51,24 +53,17 @@ unsafe impl Zeroable for FlowParticle {}
 // Top-down 2D camera
 #[derive(Debug)]
 pub struct Camera {
+    // Movement
     pub changed: bool,
     pub slow_spd: f32,
     pub fast_spd_fac: f32,
+
+    // Camera
     pub pos: glam::Vec2,
     pub scl: f32,
     pub asp: f32,
 }
 impl Camera {
-    // Might need to do something more here in the future
-    // ([x_pos, y_pos], [x_scl, y_scl])
-    pub fn build_view_proj(&self) -> ([f32; 2], [f32; 2]) {
-        if self.asp > 1.0 {
-            (self.pos.into(), [(1.0 / self.asp) * self.scl, self.scl])
-        } else {
-            (self.pos.into(), [self.scl, self.scl * self.asp])
-        }
-    }
-
     // Camera controller
     pub fn update(&mut self, input: &WinitInputHelper, delta: f32) {
         // Moving around the camera
@@ -110,6 +105,7 @@ impl Camera {
     }
 }
 
+// Might need to do more with this in the future
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct ViewUniforms {
@@ -127,6 +123,12 @@ impl ViewUniforms {
     }
 
     pub fn update_view_proj(&mut self, camera: &Camera) {
-        (self.view_pos, self.view_scl) = camera.build_view_proj();
+        if camera.asp > 1.0 {
+            self.view_pos = camera.pos.into();
+            self.view_scl = [(1.0 / camera.asp) * camera.scl, camera.scl];
+        } else {
+            self.view_pos = camera.pos.into();
+            self.view_scl = [camera.scl, camera.scl * camera.asp];
+        };
     }
 }
