@@ -1,6 +1,6 @@
 #version 450
 
-#define NUM_FLOW 1000000
+#define NUM_FLOW 100000
 #define EXT 6.0
 #define INNER_EXT 2.0
 #define MAX_SPEED 0.5
