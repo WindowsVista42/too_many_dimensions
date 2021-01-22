@@ -11,31 +11,6 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        pos: [-0.086824, 0.492403],
-        col: [0.7, 0.2, 0.5],
-    },
-    Vertex {
-        pos: [-0.495134, 0.069586],
-        col: [0.1, 0.1, 0.5],
-    },
-    Vertex {
-        pos: [-0.219185, -0.449397],
-        col: [0.2, 0.4, 0.9],
-    },
-    Vertex {
-        pos: [0.359669, -0.347329],
-        col: [0.9, 0.1, 0.2],
-    },
-    Vertex {
-        pos: [0.441473, 0.234735],
-        col: [0.2, 0.8, 0.2],
-    },
-];
-
-const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
-
 const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
     FlowVertex {
         pos: [-0.01, -0.01],
@@ -67,17 +42,13 @@ fn main() {
 
         match event {
             Event::WindowEvent {
-                event:
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Released,
-                                virtual_keycode: Some(VirtualKeyCode::Return),
-                                ..
-                            },
+                event: WindowEvent::KeyboardInput {
+                    input: KeyboardInput {
+                        state: ElementState::Released,
+                        virtual_keycode: Some(VirtualKeyCode::Return),
                         ..
-                    },
-                ..
+                    }, ..
+                }, ..
             } => {
                 if state.input.held_alt() {
                     if fullscreen {
@@ -132,12 +103,6 @@ struct State {
     // TIME
     last_tick: std::time::Instant,
     delta: f32,
-
-    // BACKGROUND
-    render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    num_indices: u32,
 
     // FLOW
     flow_compute_pipeline: wgpu::ComputePipeline,
@@ -206,10 +171,6 @@ impl State {
         let sample_count = 4;
 
         // SHADER LOADING
-        let vs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/vertex.vert.spv"));
-        let fs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/fragment.frag.spv"));
         let flow_cs_module =
             device.create_shader_module(wgpu::include_spirv!("../spirv/flow.comp.spv"));
         let flow_vs_module =
@@ -259,62 +220,6 @@ impl State {
                 binding: 0,
                 resource: wgpu::BindingResource::Buffer(view_uniform_buffer.slice(..)),
             }],
-        });
-
-        // BACKGROUND
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("RENDER PIPELINE LAYOUT"),
-                bind_group_layouts: &[&view_uniform_bind_group_layout],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex_stage: ProgrammableStageDescriptor {
-                module: &vs_module,
-                entry_point: "main",
-            },
-            fragment_stage: Some(ProgrammableStageDescriptor {
-                module: &fs_module,
-                entry_point: "main",
-            }),
-            rasterization_state: Some(wgpu::RasterizationStateDescriptor {
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: wgpu::CullMode::None,
-                clamp_depth: false,
-                depth_bias: 0,
-                depth_bias_slope_scale: 0.0,
-                depth_bias_clamp: 0.0,
-            }),
-            color_states: &[wgpu::ColorStateDescriptor {
-                format: sc_desc.format,
-                color_blend: wgpu::BlendDescriptor::REPLACE,
-                alpha_blend: wgpu::BlendDescriptor::REPLACE,
-                write_mask: wgpu::ColorWrite::ALL,
-            }],
-            primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-            depth_stencil_state: None,
-            vertex_state: wgpu::VertexStateDescriptor {
-                index_format: wgpu::IndexFormat::Uint16,
-                vertex_buffers: &[Vertex::desc()],
-            },
-            sample_count,
-            sample_mask: !0,
-            alpha_to_coverage_enabled: false,
-        });
-
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("VERTEX BUFFER"),
-            contents: &bytemuck::cast_slice(&VERTICES),
-            usage: wgpu::BufferUsage::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("INDEX BUFFER"),
-            contents: &bytemuck::cast_slice(&INDICES),
-            usage: wgpu::BufferUsage::INDEX,
         });
 
         // FLOW
@@ -535,12 +440,6 @@ impl State {
             // TIME
             last_tick: std::time::Instant::now(),
             delta,
-
-            // BACKGROUND
-            render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices: INDICES.len() as u32,
 
             // FLOW
             flow_compute_pipeline,
