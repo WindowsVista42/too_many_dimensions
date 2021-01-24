@@ -13,6 +13,17 @@ unsafe impl Zeroable for FlowSimData {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+pub struct FlowManipulator {
+    pub pos: [f32; 2],
+    pub radius: f32,
+    pub scale: u16, // 0 - 8, gpu does conversion.. Test if faster
+    pub flag: u16, // Dictates manipulator characteristics
+}
+unsafe impl Pod for FlowManipulator {}
+unsafe impl Zeroable for FlowManipulator {}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct FlowVertex {
     pub pos: [f32; 2],
 }
