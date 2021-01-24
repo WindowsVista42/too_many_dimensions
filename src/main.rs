@@ -25,6 +25,16 @@ const FLOW_SHAPE_INDICES: [u16; 6] = [
 
 const NUM_FLOW: usize = 100_000;
 
+fn toggle_fullscreen(state: &mut State, window: &Window) {
+    if state.fullscreen {
+        window.set_fullscreen(None);
+        state.fullscreen = false;
+    } else {
+        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        state.fullscreen = true;
+    }
+}
+
 fn main() {
     let event_loop = EventLoop::new();
 
@@ -43,26 +53,38 @@ fn main() {
         }
 
         match event {
-            #[rustfmt::skip]
             Event::WindowEvent {
-                event: WindowEvent::KeyboardInput {
-                    input: KeyboardInput {
-                        state: ElementState::Released,
-                        virtual_keycode: Some(VirtualKeyCode::Return),
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Released,
+                                virtual_keycode: Some(VirtualKeyCode::Return),
+                                ..
+                            },
                         ..
-                    }, ..
-                }, ..
+                    },
+                ..
             } => {
                 if state.input.held_alt() {
-                    if state.fullscreen {
-                        window.set_fullscreen(None);
-                        state.fullscreen = false;
-                    } else {
-                        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-                        state.fullscreen = true;
-                    }
+                    toggle_fullscreen(&mut state, &window);
                 }
-            },
+            }
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Released,
+                                virtual_keycode: Some(VirtualKeyCode::F11),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                toggle_fullscreen(&mut state, &window);
+            }
             Event::RedrawRequested(_) => {
                 state.render();
             }
