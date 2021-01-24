@@ -1,6 +1,5 @@
 #version 450
 
-#define NUM_FLOW 100000
 #define EXT 6.0
 #define INNER_EXT 2.0
 #define MAX_SPEED 0.5
@@ -69,6 +68,7 @@ struct Particle {
 };
 layout(set = 0, binding = 0) uniform FlowSim {
     float u_dt;
+    uint u_num_flow;
 };
 layout(set = 0, binding = 1) buffer SrcParticles {
     Particle src[NUM_FLOW];
@@ -79,7 +79,7 @@ layout(set = 0, binding = 2) buffer DstParticles {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    if (idx > NUM_FLOW) { return; }
+    if (idx > u_num_flow) { return; }
 
     vec2 vpos = src[idx].pos;
     vec2 vvel = src[idx].vel;

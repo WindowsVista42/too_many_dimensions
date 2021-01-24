@@ -4,6 +4,15 @@ use winit_input_helper::WinitInputHelper;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+pub struct FlowSimData {
+    pub(crate) dt: f32,
+    pub(crate) count: u32,
+}
+unsafe impl Pod for FlowSimData {}
+unsafe impl Zeroable for FlowSimData {}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct FlowVertex {
     pub pos: [f32; 2],
 }

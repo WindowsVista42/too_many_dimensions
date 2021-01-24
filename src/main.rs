@@ -23,6 +23,7 @@ const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
+const MAX_NUM_FLOW: usize = 1_000_000;
 const NUM_FLOW: usize = 100_000;
 
 fn toggle_fullscreen(state: &mut State, window: &Window) {
@@ -128,6 +129,7 @@ struct State {
     // TIME
     last_tick: std::time::Instant,
     delta: f32,
+    flow_elapsed_time: std::time::Duration,
 
     // FLOW
     flow_compute_pipeline: wgpu::ComputePipeline,
@@ -135,14 +137,17 @@ struct State {
     flow_sim_buffer: wgpu::Buffer,
     flow_bind_groups: Vec<wgpu::BindGroup>, // Alternating buffer
     flow_buffers: Vec<wgpu::Buffer>,        // Alternating buffer
+
     flow_vertices_buffer: wgpu::Buffer,
     flow_indices_buffer: wgpu::Buffer,
-    flow_work_group_count: u32,
     flow_num_indices: u32,
+
+    flow_work_group_count: u32,
     buf_idx: usize, // Buffer idx for compute
+    flow_cap: u32,
+    flow_count: u32,
 
     // BUILD AFTER SELF
-    render_bundle: Option<wgpu::RenderBundle>,
     multisampled_framebuffer: Option<wgpu::TextureView>,
 
     // WINDOW
@@ -252,10 +257,13 @@ impl State {
         });
 
         // FLOW
-        let flow_sim_data = [0.0f32].to_vec();
+        let flow_sim_data = FlowSimData {
+            dt: 0.0,
+            count: NUM_FLOW as u32,
+        };
         let flow_sim_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
-            contents: bytemuck::cast_slice(&flow_sim_data),
+            contents: bytemuck::cast_slice(&[flow_sim_data]),
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
         });
 
@@ -268,7 +276,9 @@ impl State {
                         visibility: wgpu::ShaderStage::COMPUTE,
                         ty: wgpu::BindingType::UniformBuffer {
                             dynamic: false,
-                            min_binding_size: wgpu::BufferSize::new(flow_sim_data.len() as _),
+                            min_binding_size: wgpu::BufferSize::new(
+                                std::mem::size_of::<FlowSimData>() as _,
+                            ),
                         },
                         count: None,
                     },
@@ -387,7 +397,7 @@ impl State {
                 pos: glam::Vec2::zero().into(),
                 vel: glam::Vec2::zero().into()
             };
-            (4 * NUM_FLOW) as usize
+            (4 * MAX_NUM_FLOW) as usize
         ];
         for p in initial_flow_data.iter_mut() {
             p.pos[0] = 12.0 * (rand::random::<f32>() - 0.5); // posx
@@ -470,6 +480,7 @@ impl State {
             // TIME
             last_tick: std::time::Instant::now(),
             delta,
+            flow_elapsed_time: std::time::Duration::new(0, 0),
 
             // FLOW
             flow_compute_pipeline,
@@ -479,10 +490,12 @@ impl State {
             flow_buffers,
             flow_vertices_buffer,
             flow_indices_buffer,
-            flow_work_group_count,
             flow_num_indices,
 
-            render_bundle: None,
+            flow_work_group_count,
+            flow_cap: MAX_NUM_FLOW as u32,
+            flow_count: NUM_FLOW as u32,
+
             multisampled_framebuffer: None,
 
             // WINDOW
@@ -491,7 +504,6 @@ impl State {
             active: Some(0),
         };
 
-        s.create_render_bundle();
         s.create_multisampled_framebuffer();
 
         s
@@ -521,38 +533,6 @@ impl State {
         } else {
             self.multisampled_framebuffer = None;
         }
-    }
-
-    fn create_render_bundle(&mut self) {
-        self.render_bundle = Some({
-            let mut rpass =
-                self.device
-                    .create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
-                        label: Some("FLOW RENDER BUNDLE"),
-                        color_formats: &[self.sc_desc.format],
-                        depth_stencil_format: None,
-                        sample_count: self.sample_count,
-                    });
-
-            // RENDER BACKGROUND
-            // rpass.set_pipeline(&self.render_pipeline);
-            // rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
-            // rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            // rpass.set_index_buffer(self.index_buffer.slice(..));
-            // rpass.draw_indexed(0..self.num_indices, 0, 0..1);
-
-            // RENDER FLOW PARTICLES
-            rpass.set_pipeline(&self.flow_render_pipeline);
-            rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
-            rpass.set_vertex_buffer(0, self.flow_buffers[0].slice(..));
-            rpass.set_vertex_buffer(1, self.flow_vertices_buffer.slice(..));
-            rpass.set_index_buffer(self.flow_indices_buffer.slice(..));
-            rpass.draw_indexed(0..self.flow_num_indices, 0, 0..NUM_FLOW as _);
-
-            rpass.finish(&wgpu::RenderBundleDescriptor {
-                label: Some("main"),
-            })
-        });
     }
 
     fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -600,6 +580,17 @@ impl State {
         }
     }
 
+    fn change_flow_count(&mut self) {
+        self.flow_count = 50000 * self.flow_elapsed_time.as_secs_f32() as u32;
+        self.flow_count = ((((self.flow_elapsed_time.as_secs_f32()) * 0.05 + std::f32::consts::PI).cos() + 1.0) / 2.0 * self.flow_cap as f32) as u32;
+        self.queue.write_buffer(
+            &self.flow_sim_buffer,
+            std::mem::size_of::<f32>() as _,
+            bytemuck::cast_slice(&[self.flow_count]),
+        );
+        self.flow_work_group_count = ((self.flow_count as f32) / (64.0)).ceil() as u32;
+    }
+
     fn render(&mut self) {
         self.frame_num += 1;
 
@@ -610,6 +601,7 @@ impl State {
             });
 
         if !self.pause {
+            self.change_flow_count();
             std::mem::swap(
                 &mut self.flow_buffers[0].slice(..),
                 &mut self.flow_buffers[1].slice(..),
@@ -626,12 +618,12 @@ impl State {
         if let Some(active) = self.active {
             if active >= self.frame_num {
                 self.queue.submit(std::iter::once(encoder.finish()));
-                self.update_delta();
+                self.update_time_info();
                 return;
             }
         } else {
             self.queue.submit(std::iter::once(encoder.finish()));
-            self.update_delta();
+            self.update_time_info();
             return;
         }
 
@@ -670,11 +662,18 @@ impl State {
                 depth_stencil_attachment: None,
             });
 
-            rpass.execute_bundles(&mut self.render_bundle.iter());
+            // RENDER FLOW PARTICLES
+            rpass.set_pipeline(&self.flow_render_pipeline);
+            rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
+            rpass.set_vertex_buffer(0, self.flow_buffers[0].slice(..));
+            rpass.set_vertex_buffer(1, self.flow_vertices_buffer.slice(..));
+            rpass.set_index_buffer(self.flow_indices_buffer.slice(..));
+            rpass.draw_indexed(0..self.flow_num_indices, 0, 0..self.flow_count as _);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
-        self.update_delta();
+
+        self.update_time_info();
     }
 
     fn update_view_uniforms(&mut self) {
@@ -687,8 +686,11 @@ impl State {
     }
 
     // Update all sim deltas
-    fn update_delta(&mut self) {
+    fn update_time_info(&mut self) {
         self.delta = self.last_tick.elapsed().as_secs_f32();
+        if !self.pause {
+            self.flow_elapsed_time += self.last_tick.elapsed();
+        }
         self.queue.write_buffer(
             &self.flow_sim_buffer,
             0,
