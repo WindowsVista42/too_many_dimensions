@@ -1,5 +1,3 @@
-#![feature(destructuring_assignment)]
-
 mod datatypes;
 use datatypes::*;
 
@@ -11,14 +9,19 @@ use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
+#[rustfmt::skip]
 const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
-    FlowVertex { pos: [-0.01, -0.01] },
-    FlowVertex { pos: [-0.01, 0.01] },
-    FlowVertex { pos: [0.01, 0.01] },
-    FlowVertex { pos: [0.01, -0.01] },
+    FlowVertex { pos: [-0.01, -0.01], },
+    FlowVertex { pos: [-0.01,  0.01], },
+    FlowVertex { pos: [ 0.01,  0.01], },
+    FlowVertex { pos: [ 0.01, -0.01], },
 ];
 
-const FLOW_SHAPE_INDICES: [u16; 6] = [0, 1, 2, 0, 2, 3];
+#[rustfmt::skip]
+const FLOW_SHAPE_INDICES: [u16; 6] = [
+    0, 1, 2,
+    0, 2, 3,
+];
 
 const NUM_FLOW: usize = 100_000;
 
@@ -29,9 +32,8 @@ fn main() {
         .with_title("Too Many Dimensions")
         .build(&event_loop)
         .unwrap();
-    window.set_cursor_visible(false);
 
-    let mut state = block_on(State::new(&window));
+    let mut state = block_on(State::new(&window, 8));
 
     event_loop.run(move |event, _, control_flow| {
         state.update(&event);
@@ -41,6 +43,7 @@ fn main() {
         }
 
         match event {
+            #[rustfmt::skip]
             Event::WindowEvent {
                 event: WindowEvent::KeyboardInput {
                     input: KeyboardInput {
@@ -59,7 +62,7 @@ fn main() {
                         state.fullscreen = true;
                     }
                 }
-            }
+            },
             Event::RedrawRequested(_) => {
                 state.render();
             }
@@ -127,8 +130,7 @@ struct State {
 }
 
 impl State {
-    async fn new(window: &Window) -> State {
-
+    async fn new(window: &Window, sample_count: u32) -> Self {
         // INPUT
         let input = WinitInputHelper::new();
 
@@ -174,8 +176,6 @@ impl State {
         };
 
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
-
-        let sample_count = 4;
 
         // SHADER LOADING
         let flow_cs_module =
@@ -363,15 +363,15 @@ impl State {
         let mut initial_flow_data = vec![
             FlowParticle {
                 pos: glam::Vec2::zero().into(),
-                vel: glam::Vec2::zero().into(),
+                vel: glam::Vec2::zero().into()
             };
             (4 * NUM_FLOW) as usize
         ];
         for p in initial_flow_data.iter_mut() {
-            p.pos[0] = 12.0 * (rand::random::<f32>() - 0.5); //posx
-            p.pos[1] = 12.0 * (rand::random::<f32>() - 0.5); //posy
-            p.vel[0] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; //velx
-            p.vel[1] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; //vely
+            p.pos[0] = 12.0 * (rand::random::<f32>() - 0.5); // posx
+            p.pos[1] = 12.0 * (rand::random::<f32>() - 0.5); // posy
+            p.vel[0] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; // velx
+            p.vel[1] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; // vely
             if p.pos[0] == 0.0 {
                 p.pos[0] = 0.01;
             }
@@ -513,13 +513,11 @@ impl State {
                     });
 
             // RENDER BACKGROUND
-            /*
-            rpass.set_pipeline(&self.render_pipeline);
-            rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
-            rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            rpass.set_index_buffer(self.index_buffer.slice(..));
-            rpass.draw_indexed(0..self.num_indices, 0, 0..1);
-            */
+            // rpass.set_pipeline(&self.render_pipeline);
+            // rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
+            // rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            // rpass.set_index_buffer(self.index_buffer.slice(..));
+            // rpass.draw_indexed(0..self.num_indices, 0, 0..1);
 
             // RENDER FLOW PARTICLES
             rpass.set_pipeline(&self.flow_render_pipeline);
