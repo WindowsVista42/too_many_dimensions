@@ -5,8 +5,8 @@ use winit_input_helper::WinitInputHelper;
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct FlowSimData {
-    pub(crate) dt: f32,
-    pub(crate) count: u32,
+    pub dt: f32,
+    pub count: u32,
 }
 unsafe impl Pod for FlowSimData {}
 unsafe impl Zeroable for FlowSimData {}
