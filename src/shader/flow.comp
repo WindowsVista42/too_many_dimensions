@@ -1,5 +1,6 @@
 #version 450
 
+#define MAX_FLOW 1000000
 #define EXT 6.0
 #define INNER_EXT 2.0
 #define MAX_SPEED 0.5
@@ -71,10 +72,10 @@ layout(set = 0, binding = 0) uniform FlowSim {
     uint u_num_flow;
 };
 layout(set = 0, binding = 1) buffer SrcParticles {
-    Particle src[NUM_FLOW];
+    Particle src[MAX_FLOW];
 };
 layout(set = 0, binding = 2) buffer DstParticles {
-    Particle dst[NUM_FLOW];
+    Particle dst[MAX_FLOW];
 };
 
 void main() {
