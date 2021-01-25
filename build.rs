@@ -69,6 +69,8 @@ fn main() -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
 
     let mut compiler = shaderc::Compiler::new().context("Unable to create shader compiler")?;
+    let mut options = shaderc::CompileOptions::new().context("Unable to create compiler options")?;
+    options.set_optimization_level(shaderc::OptimizationLevel::Performance);
 
     for shader in shaders {
         println!(
@@ -81,7 +83,7 @@ fn main() -> Result<()> {
             shader.kind,
             &shader.src_path.to_str().unwrap(),
             "main",
-            None,
+            Some(&options),
         )?;
         write(shader.spv_path, compiled.as_binary_u8())?;
     }

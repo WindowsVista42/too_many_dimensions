@@ -7,6 +7,12 @@ use winit_input_helper::WinitInputHelper;
 pub struct FlowSimData {
     pub dt: f32,
     pub count: u32,
+    /*
+    pub ext: f32,
+    pub flow_accel: f32,
+    pub flow_scale: f32,
+    pub flow_offset: f32,
+    */
 }
 unsafe impl Pod for FlowSimData {}
 unsafe impl Zeroable for FlowSimData {}

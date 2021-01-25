@@ -582,7 +582,7 @@ impl State {
 
     fn change_flow_count(&mut self) {
         self.flow_count = 50000 * self.flow_elapsed_time.as_secs_f32() as u32;
-        self.flow_count = ((((self.flow_elapsed_time.as_secs_f32()) * 0.05 + std::f32::consts::PI).cos() + 1.0) / 2.0 * self.flow_cap as f32) as u32;
+        self.flow_count = ((((self.flow_elapsed_time.as_secs_f32()) * 0.5 + std::f32::consts::PI).cos() + 1.0) / 2.0 * self.flow_cap as f32) as u32;
         self.queue.write_buffer(
             &self.flow_sim_buffer,
             std::mem::size_of::<f32>() as _,
