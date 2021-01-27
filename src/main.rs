@@ -1,5 +1,8 @@
-mod datatypes;
-use datatypes::*;
+mod data;
+mod flowdata;
+
+use data::*;
+use flowdata::*;
 
 use futures::executor::block_on;
 use wgpu::util::DeviceExt;
@@ -66,7 +69,7 @@ fn main() {
                 if state.input.held_alt() {
                     toggle_fullscreen(&mut state, &window);
                 }
-            }
+            },
             #[rustfmt::skip]
             Event::WindowEvent {
                 event: WindowEvent::KeyboardInput {
@@ -575,7 +578,10 @@ impl State {
 
     fn change_flow_count(&mut self) {
         self.flow_count = 50000 * self.flow_elapsed_time.as_secs_f32() as u32;
-        self.flow_count = ((((self.flow_elapsed_time.as_secs_f32()) * 0.5 + std::f32::consts::PI).cos() + 1.0) / 2.0 * self.flow_cap as f32) as u32;
+        self.flow_count =
+            ((((self.flow_elapsed_time.as_secs_f32()) * 0.5 + std::f32::consts::PI).cos() + 1.0)
+                / 2.0
+                * self.flow_cap as f32) as u32;
         self.queue.write_buffer(
             &self.flow_sim_buffer,
             std::mem::size_of::<f32>() as _,
