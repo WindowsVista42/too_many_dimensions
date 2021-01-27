@@ -5,7 +5,6 @@ authors = ["Sean Moulton <bananamoulton@gmail.com>"]
 edition = "2018"
 
 [profile.release]
-panic = "abort"
 # lto = true
 
 [build-dependencies]

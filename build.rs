@@ -69,7 +69,8 @@ fn main() -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
 
     let mut compiler = shaderc::Compiler::new().context("Unable to create shader compiler")?;
-    let mut options = shaderc::CompileOptions::new().context("Unable to create compiler options")?;
+    let mut options =
+        shaderc::CompileOptions::new().context("Unable to create compiler options")?;
     options.set_optimization_level(shaderc::OptimizationLevel::Performance);
 
     for shader in shaders {
