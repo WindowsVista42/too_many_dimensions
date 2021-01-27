@@ -21,12 +21,13 @@ pub struct FlowUniforms {
     pub flow_flag:  u16,    // Global flags
 
     // Global Collider Settings
-    pub coll_scale: f32,    // Global size scale
-    pub coll_flags: u16,    // Global flags
+    pub coll_scl:   f32,    // Global size factor
+    pub coll_flag:  u16,    // Global flags
 
     // Global Manipulator Settings
-    pub mani_scale: f32,    // Global movement scale
-    pub mani_flags: u16,    // Global flags
+    pub mani_acc:   f32,    // Global inner acceleration factor
+    pub mani_spd:   f32,    // Global inner speed factor
+    pub mani_flag:  u16,    // Global flags
 
     // Global Spawner Settings
     pub spaw_rate:  f32,    // Global spawn rate factor
