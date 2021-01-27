@@ -3,7 +3,6 @@ use datatypes::*;
 
 use futures::executor::block_on;
 use wgpu::util::DeviceExt;
-use wgpu::ProgrammableStageDescriptor;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
@@ -54,35 +53,29 @@ fn main() {
         }
 
         match event {
+            #[rustfmt::skip]
             Event::WindowEvent {
-                event:
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Released,
-                                virtual_keycode: Some(VirtualKeyCode::Return),
-                                ..
-                            },
+                event: WindowEvent::KeyboardInput {
+                    input: KeyboardInput {
+                        state: ElementState::Released,
+                        virtual_keycode: Some(VirtualKeyCode::Return),
                         ..
-                    },
-                ..
+                    }, ..
+                }, ..
             } => {
                 if state.input.held_alt() {
                     toggle_fullscreen(&mut state, &window);
                 }
             }
+            #[rustfmt::skip]
             Event::WindowEvent {
-                event:
-                    WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Released,
-                                virtual_keycode: Some(VirtualKeyCode::F11),
-                                ..
-                            },
+                event: WindowEvent::KeyboardInput {
+                    input: KeyboardInput {
+                        state: ElementState::Released,
+                        virtual_keycode: Some(VirtualKeyCode::F11),
                         ..
-                    },
-                ..
+                    }, ..
+                }, ..
             } => {
                 toggle_fullscreen(&mut state, &window);
             }
@@ -180,7 +173,7 @@ impl State {
                 compatible_surface: Some(&surface),
             })
             .await
-            .unwrap();
+            .expect("COULD NOT FIND GPU");
 
         let (device, queue) = adapter
             .request_device(
@@ -192,7 +185,7 @@ impl State {
                 None,
             )
             .await
-            .unwrap();
+            .expect("COULD NOT BUILD LOGICAL DEVICE");
 
         let sc_desc = wgpu::SwapChainDescriptor {
             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
@@ -257,7 +250,7 @@ impl State {
         });
 
         // FLOW
-        let flow_sim_data = FlowSimData {
+        let flow_sim_data = FlowUniforms {
             dt: 0.0,
             count: NUM_FLOW as u32,
         };
@@ -277,7 +270,7 @@ impl State {
                         ty: wgpu::BindingType::UniformBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                std::mem::size_of::<FlowSimData>() as _,
+                                std::mem::size_of::<FlowUniforms>() as _,
                             ),
                         },
                         count: None,
@@ -320,7 +313,7 @@ impl State {
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                 label: Some("FLOW COMPUTE PIPELINE"),
                 layout: Some(&flow_compute_pipeline_layout),
-                compute_stage: ProgrammableStageDescriptor {
+                compute_stage: wgpu::ProgrammableStageDescriptor {
                     module: &flow_cs_module,
                     entry_point: "main",
                 },
