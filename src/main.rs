@@ -211,7 +211,6 @@ impl State {
 
         // UNIFORMS
         let camera = Camera {
-            changed: false,
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
             pos: glam::Vec2::zero(),
@@ -589,10 +588,8 @@ impl State {
                 self.pause = !self.pause;
             }
 
-            self.camera.update(&self.input, self.delta);
-            if self.camera.changed {
+            if self.camera.update(&self.input, self.delta) {
                 self.update_view_uniforms();
-                self.camera.changed = false;
             }
         }
     }

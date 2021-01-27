@@ -6,7 +6,6 @@ use winit_input_helper::WinitInputHelper;
 #[derive(Debug)]
 pub struct Camera {
     // Movement
-    pub changed: bool,
     pub slow_spd: f32,
     pub fast_spd_fac: f32,
 
@@ -17,7 +16,8 @@ pub struct Camera {
 }
 impl Camera {
     // Camera controller
-    pub fn update(&mut self, input: &WinitInputHelper, delta: f32) {
+    pub fn update(&mut self, input: &WinitInputHelper, delta: f32) -> bool {
+        let mut changed = false;
         // Moving around the camera
         {
             let mut cam_pos_delta = glam::Vec2::zero();
@@ -34,7 +34,7 @@ impl Camera {
                 cam_pos_delta.y += self.slow_spd;
             }
             if cam_pos_delta != glam::Vec2::zero() {
-                self.changed = true;
+                changed = true;
                 cam_pos_delta = cam_pos_delta.normalize() * delta;
 
                 if input.key_held(VirtualKeyCode::LShift) {
@@ -49,11 +49,13 @@ impl Camera {
         {
             let scroll_diff = input.scroll_diff();
             if scroll_diff != 0.0 {
-                self.changed = true;
+                changed = true;
                 let zoom_fac = self.scl.log2() + (scroll_diff * 0.25);
                 self.scl = (2f32).powf(zoom_fac);
             }
         }
+
+        changed
     }
 }
 
