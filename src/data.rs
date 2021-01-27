@@ -2,63 +2,6 @@ use bytemuck::{Pod, Zeroable};
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-// Sim info
-pub struct FlowUniforms {
-    pub dt: f32,
-    pub count: u32,
-
-    // Global Flow Settings
-    pub flow_ext: f32,
-    pub flow_accel: f32,
-    pub flow_scale: f32,
-    pub flow_offset: f32,
-    pub flow_flags: u16,
-
-    // Global Manipulator Settings
-    pub mani_scale: f32,
-    pub mani_flags: u16,
-
-    // Global Spawner Settings
-    pub spaw_scale: f32,
-    pub spaw_flags: u16,
-
-    // Global Collector Settings
-    pub coll_scale: f32,
-    pub coll_flags: u16,
-}
-unsafe impl Pod for FlowUniforms {}
-unsafe impl Zeroable for FlowUniforms {}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct FlowManipulator {
-    pub pos: [f32; 2],
-    pub radius: f32,
-    pub scale: u16, // 0 - 8, gpu does conversion.. Test if faster
-    pub flag: u16, // Dictates manipulator characteristics
-}
-unsafe impl Pod for FlowManipulator {}
-unsafe impl Zeroable for FlowManipulator {}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct FlowVertex {
-    pub pos: [f32; 2],
-}
-unsafe impl Pod for FlowVertex {}
-unsafe impl Zeroable for FlowVertex {}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct FlowParticle {
-    pub pos: [f32; 2],
-    pub vel: [f32; 2],
-}
-unsafe impl Pod for FlowParticle {}
-unsafe impl Zeroable for FlowParticle {}
-
 // Top-down 2D camera
 #[derive(Debug)]
 pub struct Camera {
