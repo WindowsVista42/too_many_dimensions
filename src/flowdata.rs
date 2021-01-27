@@ -33,7 +33,7 @@ pub struct FlowUniforms {
     pub spaw_rate:  f32,    // Global spawn rate factor
     pub spaw_scl:   f32,    // Global radius factor
     pub spaw_var:   f32,    // Global scale variance factor
-    pub spaw_col:  [u8; 3], // Global default spawn color
+    pub spaw_col:  [u8; 4], // Global default spawn color
     pub spaw_flag:  u16,    // Global flags
 
     // Global Accumulator Settings
@@ -83,7 +83,7 @@ pub struct FlowSpawner {
     pub rate:       f32,    // Spawn rate
     pub scale:      f32,    // Particle scale
     pub variance:   f32,    // Variance of particle scale
-    pub color:     [u8; 3], // Color of particles
+    pub color:     [u8; 4], // Color of particles
     pub flags:      u8,     // Dictates spawner characteristics
 }
 unsafe impl Pod for FlowSpawner {}
