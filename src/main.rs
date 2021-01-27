@@ -130,7 +130,8 @@ struct State {
     // FLOW
     flow_compute_pipeline: wgpu::ComputePipeline,
     flow_render_pipeline: wgpu::RenderPipeline,
-    flow_sim_buffer: wgpu::Buffer,
+    flow_uniforms: FlowUniforms,
+    flow_uniform_buffer: wgpu::Buffer,
     flow_bind_groups: Vec<wgpu::BindGroup>, // Alternating buffer
     flow_buffers: Vec<wgpu::Buffer>,        // Alternating buffer
 
@@ -253,7 +254,7 @@ impl State {
         });
 
         // FLOW
-        let flow_sim_data = FlowUniforms {
+        let flow_uniforms = FlowUniforms {
             dt: 0.0,
             count: NUM_FLOW as u32,
             part_ext: 0.0,
@@ -276,9 +277,9 @@ impl State {
             accu_gain: 0.0,
             accu_flag: 0,
         };
-        let flow_sim_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
-            contents: bytemuck::cast_slice(&[flow_sim_data]),
+            contents: bytemuck::cast_slice(&[flow_uniforms]),
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
         });
 
@@ -448,7 +449,7 @@ impl State {
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
-                        resource: wgpu::BindingResource::Buffer(flow_sim_buffer.slice(..)),
+                        resource: wgpu::BindingResource::Buffer(flow_uniform_buffer.slice(..)),
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
@@ -500,7 +501,8 @@ impl State {
             // FLOW
             flow_compute_pipeline,
             flow_render_pipeline,
-            flow_sim_buffer,
+            flow_uniforms,
+            flow_uniform_buffer,
             flow_bind_groups,
             flow_buffers,
             flow_vertices_buffer,
@@ -602,7 +604,7 @@ impl State {
                 / 2.0
                 * self.flow_cap as f32) as u32;
         self.queue.write_buffer(
-            &self.flow_sim_buffer,
+            &self.flow_uniform_buffer,
             std::mem::size_of::<f32>() as _,
             bytemuck::cast_slice(&[self.flow_count]),
         );
@@ -710,7 +712,7 @@ impl State {
             self.flow_elapsed_time += self.last_tick.elapsed();
         }
         self.queue.write_buffer(
-            &self.flow_sim_buffer,
+            &self.flow_uniform_buffer,
             0,
             bytemuck::cast_slice(&[self.delta]),
         );
