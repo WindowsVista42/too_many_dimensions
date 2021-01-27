@@ -4,18 +4,32 @@ use winit_input_helper::WinitInputHelper;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct FlowSimData {
+// Sim info
+pub struct FlowUniforms {
     pub dt: f32,
     pub count: u32,
-    /*
-    pub ext: f32,
+
+    // Global Flow Settings
+    pub flow_ext: f32,
     pub flow_accel: f32,
     pub flow_scale: f32,
     pub flow_offset: f32,
-    */
+    pub flow_flags: u16,
+
+    // Global Manipulator Settings
+    pub mani_scale: f32,
+    pub mani_flags: u16,
+
+    // Global Spawner Settings
+    pub spaw_scale: f32,
+    pub spaw_flags: u16,
+
+    // Global Collector Settings
+    pub coll_scale: f32,
+    pub coll_flags: u16,
 }
-unsafe impl Pod for FlowSimData {}
-unsafe impl Zeroable for FlowSimData {}
+unsafe impl Pod for FlowUniforms {}
+unsafe impl Zeroable for FlowUniforms {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
