@@ -1,10 +1,10 @@
-mod data;
-mod flowdata;
+#![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
 use data::*;
 use flowdata::*;
 
 use futures::executor::block_on;
+use memoffset::*;
 use wgpu::util::DeviceExt;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -632,7 +632,7 @@ impl State {
                 * self.flow_cap as f32) as u32;
         self.queue.write_buffer(
             &self.flow_uniform_buffer,
-            std::mem::size_of::<f32>() as _,
+            offset_of!(flow::Uniforms, ct) as _,
             bytemuck::cast_slice(&[self.flow_count]),
         );
         self.flow_work_group_count = ((self.flow_count as f32) / (64.0)).ceil() as u32;
@@ -727,7 +727,7 @@ impl State {
         self.view_uniforms.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.view_uniform_buffer,
-            0,
+            offset_of!(view::ViewUniforms, view_pos) as _,
             bytemuck::cast_slice(&[self.view_uniforms]),
         );
     }
@@ -740,7 +740,7 @@ impl State {
         }
         self.queue.write_buffer(
             &self.flow_uniform_buffer,
-            0,
+            offset_of!(flow::Uniforms, dt) as _,
             bytemuck::cast_slice(&[self.delta]),
         );
         self.last_tick = std::time::Instant::now();
