@@ -132,6 +132,8 @@ struct State {
     flow_render_pipeline: wgpu::RenderPipeline,
     flow_uniforms: FlowUniforms,
     flow_uniform_buffer: wgpu::Buffer,
+    flow_atomics: FlowAtomics,
+    flow_atomic_buffer: wgpu::Buffer,
     flow_bind_groups: Vec<wgpu::BindGroup>, // Alternating buffer
     flow_buffers: Vec<wgpu::Buffer>,        // Alternating buffer
 
@@ -528,6 +530,8 @@ impl State {
             flow_render_pipeline,
             flow_uniforms,
             flow_uniform_buffer,
+            flow_atomics,
+            flow_atomic_buffer,
             flow_bind_groups,
             flow_buffers,
             flow_vertices_buffer,
