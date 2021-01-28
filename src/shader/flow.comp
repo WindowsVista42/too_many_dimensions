@@ -68,12 +68,12 @@ layout(set = 0, binding = 0) uniform FlowUniforms {
     float mani_acc;
     float mani_spd;
 
-    float spaw_rate;
+    float spaw_rte;
     float spaw_scl;
     float spaw_var;
     vec3  spaw_col;
 
-    float accu_gain;
+    float accu_rte;
 };
 
 // Ref FlowAtomics in flowdata.rs
