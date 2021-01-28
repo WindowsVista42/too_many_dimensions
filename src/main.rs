@@ -280,7 +280,7 @@ impl State {
         });
 
         let flow_atomics = flow::Atomics {
-            atom_count: 0,
+            atom_ct: 0,
         };
 
         let flow_atomic_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

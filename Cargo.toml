@@ -15,15 +15,12 @@ rayon = "1.5.0"
 shaderc = "0.7.0"
 
 [dependencies]
-bytemuck = "1.4.1"
+bytemuck = { version = "1.5.0", features = ["derive"] }
 futures = "0.3.9"
 glam = "0.12.0"
+memoffset = { version = "0.6.1", features = ["unstable_const"] }
 rand = "0.8.1"
 rand_xorshift = "0.3.0"
 wgpu = "0.6.2"
 winit = "0.24.0"
 winit_input_helper = "0.9.0"
-
-[dependencies.memoffset]
-version = "0.6.1"
-features = ["unstable_const"]

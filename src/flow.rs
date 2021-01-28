@@ -1,8 +1,8 @@
 use bytemuck::{Pod, Zeroable};
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 // Sim info
 // Will probably have to add more in the future
 pub struct Uniforms {
@@ -35,24 +35,18 @@ pub struct Uniforms {
     // Global Accumulator Settings
     pub accu_rte:   f32,    // Global resource rate factor
 }
-unsafe impl Pod for Uniforms {}
-unsafe impl Zeroable for Uniforms {}
-
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 // Atomic sim info
 pub struct Atomics {
-    pub atom_count: u32,    // Atomic particle count
+    pub atom_ct:    u32,    // Atomic particle count
 }
-unsafe impl Pod for Atomics {}
-unsafe impl Zeroable for Atomics {}
-
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 // Checking for collision.
 // All colliders are circles.
 // Separate buffers for
@@ -61,26 +55,20 @@ pub struct Collider {
     pub pos:       [f32; 2],
     pub rad:        f32,
 }
-unsafe impl Pod for Collider {}
-unsafe impl Zeroable for Collider {}
-
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Manipulator {
     // Has Flow Collider //
     pub acc:        f32,    // Inner particle accel
     pub spd:        f32,    // Inner particle speed
     pub rot:        f32,    // 0 -> 2pi
 }
-unsafe impl Pod for Manipulator {}
-unsafe impl Zeroable for Manipulator {}
-
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Spawner {
     // Spawners do not use collider type
     // because they spawn particles.
@@ -93,37 +81,28 @@ pub struct Spawner {
     pub var:        f32,    // Variance of particle scale
     pub col:       [f32; 3],// Color of particles
 }
-unsafe impl Pod for Spawner {}
-unsafe impl Zeroable for Spawner {}
 
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Accumulator {
     // Has Flow Collider //
     pub rte:        f32,    // Gain factor, larger = more
     // Not sure if flags are needed here
 }
-unsafe impl Pod for Accumulator {}
-unsafe impl Zeroable for Accumulator {}
-
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Vertex {
     pub pos:       [f32; 2],
 }
-unsafe impl Pod for Vertex {}
-unsafe impl Zeroable for Vertex {}
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Particle {
     pub pos:       [f32; 2],
     pub vel:       [f32; 2],
 }
-unsafe impl Pod for Particle {}
-unsafe impl Zeroable for Particle {}
