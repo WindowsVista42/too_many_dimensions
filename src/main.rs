@@ -205,11 +205,11 @@ impl State {
 
         // SHADER LOADING
         let flow_cs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flow.comp.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.comp.spv"));
         let flow_vs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flowvert.vert.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.vert.spv"));
         let flow_fs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flowfrag.frag.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.frag.spv"));
 
         // UNIFORMS
         let camera = view::Camera {
