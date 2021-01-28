@@ -142,7 +142,7 @@ struct State {
     flow_num_indices: u32,
 
     flow_work_group_count: u32,
-    buf_idx: usize, // Buffer idx for compute
+    flow_buff_idx: usize, // Buffer idx for compute
     flow_cap: u32,
     flow_count: u32,
 
@@ -161,13 +161,10 @@ impl State {
         let input = WinitInputHelper::new();
 
         // FLAGS
-        let quit = false;
-        let pause = false;
         let fullscreen = match window.fullscreen() {
             Some(_) => true,
             None => false,
         };
-        let buf_idx = 0;
 
         // INSTANCE
         let size = window.inner_size();
@@ -205,11 +202,11 @@ impl State {
 
         // SHADER LOADING
         let flow_cs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flow.comp.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.comp.spv"));
         let flow_vs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flowvert.vert.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.vert.spv"));
         let flow_fs_module =
-            device.create_shader_module(wgpu::include_spirv!("../spirv/flowfrag.frag.spv"));
+            device.create_shader_module(wgpu::include_spirv!("../spir-v/flow.frag.spv"));
 
         // UNIFORMS
         let camera = view::Camera {
@@ -222,8 +219,6 @@ impl State {
 
         let mut view_uniforms = view::ViewUniforms::default();
         view_uniforms.update_view_proj(&camera);
-
-        let delta = 0.0;
 
         let view_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("UNIFORM BUFFER"),
@@ -501,10 +496,10 @@ impl State {
             input,
 
             // FLAGS
-            quit,
-            pause,
+            quit: false,
+            pause: false,
             fullscreen,
-            buf_idx,
+            flow_buff_idx: 0,
 
             // INSTANCE
             surface,
@@ -522,7 +517,7 @@ impl State {
 
             // TIME
             last_tick: std::time::Instant::now(),
-            delta,
+            delta: 0.0,
             flow_elapsed_time: std::time::Duration::new(0, 0),
 
             // FLOW
@@ -653,11 +648,11 @@ impl State {
                 &mut self.flow_buffers[0].slice(..),
                 &mut self.flow_buffers[1].slice(..),
             ); // Swap buffers for rendering
-            self.buf_idx ^= 1;
+            self.flow_buff_idx ^= 1;
 
             let mut cpass = encoder.begin_compute_pass();
             cpass.set_pipeline(&self.flow_compute_pipeline);
-            cpass.set_bind_group(0, &self.flow_bind_groups[self.buf_idx], &[]);
+            cpass.set_bind_group(0, &self.flow_bind_groups[self.flow_buff_idx], &[]);
             cpass.dispatch(self.flow_work_group_count, 1, 1);
         }
 
