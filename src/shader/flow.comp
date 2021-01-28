@@ -21,7 +21,6 @@ float noise(float p) {
 }
 
 // Simplex 2D noise
-//
 vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
 
 float snoise(vec2 v) {
@@ -52,23 +51,23 @@ float snoise(vec2 v) {
 }
 
 // Ref Particle in flow.rs
-struct FlowParticle {
+struct Particle {
     vec2  pos;
     vec2  vel;
 };
 
-struct FlowCollider {
+struct Collider {
     vec2  pos;
     float rad;
 };
 
-struct FlowManipulator {
+struct Manipulator {
     float acc;
     float spd;
     float rot;
 };
 
-struct FlowSpawner {
+struct Spawner {
     vec2  pos;
     float rad;
     float rte;
@@ -77,12 +76,12 @@ struct FlowSpawner {
     float col;
 };
 
-struct FlowAccumulator {
+struct Accumulator {
     float rte;
 };
 
 // Ref Uniforms in flow.rs
-layout(set = 0, binding = 0) uniform FlowUniforms {
+layout(set = 0, binding = 0) uniform Uniforms {
     float dt;
     uint  ct;
 
@@ -107,20 +106,21 @@ layout(set = 0, binding = 0) uniform FlowUniforms {
 };
 
 // Ref Atomics in flow.rs
-layout(set = 0, binding = 1) buffer FlowAtomics {
+layout(set = 0, binding = 1) buffer Atomics {
     uint atomic_count;
 };
 
 layout(set = 0, binding = 2) buffer SrcParticles {
-    FlowParticle src[MAX_FLOW];
+    Particle src[MAX_FLOW];
 };
 layout(set = 0, binding = 3) buffer DstParticles {
-    FlowParticle dst[MAX_FLOW];
+    Particle dst[MAX_FLOW];
 };
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx > ct) { return; }
+    atomicAdd(atomic_count, 1);
 
     vec2 vpos = src[idx].pos;
     vec2 vvel = src[idx].vel;

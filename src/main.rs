@@ -399,12 +399,12 @@ impl State {
                 index_format: wgpu::IndexFormat::Uint16,
                 vertex_buffers: &[
                     wgpu::VertexBufferDescriptor {
-                        stride: 4 * 4,
+                        stride: std::mem::size_of::<flow::Particle>() as _,
                         step_mode: wgpu::InputStepMode::Instance,
                         attributes: &wgpu::vertex_attr_array![0 => Float2, 1 => Float2],
                     },
                     wgpu::VertexBufferDescriptor {
-                        stride: 4 * 2,
+                        stride: std::mem::size_of::<flow::Vertex>() as _,
                         step_mode: wgpu::InputStepMode::Vertex,
                         attributes: &wgpu::vertex_attr_array![2 => Float2],
                     },
