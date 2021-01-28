@@ -1,7 +1,7 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
-use data::*;
-use flowdata::*;
+mod view;
+mod flow;
 
 use futures::executor::block_on;
 use memoffset::*;
@@ -12,11 +12,11 @@ use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
 #[rustfmt::skip]
-const FLOW_SHAPE_VERTICES: [FlowVertex; 4] = [
-    FlowVertex { pos: [-0.01, -0.01], },
-    FlowVertex { pos: [-0.01,  0.01], },
-    FlowVertex { pos: [ 0.01,  0.01], },
-    FlowVertex { pos: [ 0.01, -0.01], },
+const FLOW_SHAPE_VERTICES: [flow::Vertex; 4] = [
+    flow::Vertex { pos: [-0.01, -0.01], },
+    flow::Vertex { pos: [-0.01,  0.01], },
+    flow::Vertex { pos: [ 0.01,  0.01], },
+    flow::Vertex { pos: [ 0.01, -0.01], },
 ];
 
 #[rustfmt::skip]
@@ -117,8 +117,8 @@ struct State {
     sample_count: u32,
 
     // UNIFORMS
-    camera: Camera,
-    view_uniforms: ViewUniforms,
+    camera: view::Camera,
+    view_uniforms: view::ViewUniforms,
     view_uniform_buffer: wgpu::Buffer,
     view_uniform_bind_group: wgpu::BindGroup,
 
@@ -130,9 +130,9 @@ struct State {
     // FLOW
     flow_compute_pipeline: wgpu::ComputePipeline,
     flow_render_pipeline: wgpu::RenderPipeline,
-    flow_uniforms: FlowUniforms,
+    flow_uniforms: flow::Uniforms,
     flow_uniform_buffer: wgpu::Buffer,
-    flow_atomics: FlowAtomics,
+    flow_atomics: flow::Atomics,
     flow_atomic_buffer: wgpu::Buffer,
     flow_bind_groups: Vec<wgpu::BindGroup>, // Alternating buffer
     flow_buffers: Vec<wgpu::Buffer>,        // Alternating buffer
@@ -212,7 +212,7 @@ impl State {
             device.create_shader_module(wgpu::include_spirv!("../spirv/flowfrag.frag.spv"));
 
         // UNIFORMS
-        let camera = Camera {
+        let camera = view::Camera {
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
             pos: glam::Vec2::zero(),
@@ -220,7 +220,7 @@ impl State {
             asp: sc_desc.width as f32 / sc_desc.height as f32,
         };
 
-        let mut view_uniforms = ViewUniforms::default();
+        let mut view_uniforms = view::ViewUniforms::default();
         view_uniforms.update_view_proj(&camera);
 
         let delta = 0.0;
@@ -255,7 +255,7 @@ impl State {
         });
 
         // FLOW
-        let flow_uniforms = FlowUniforms {
+        let flow_uniforms = flow::Uniforms {
             dt: 0.0,
             ct: NUM_FLOW as u32,
 
@@ -284,7 +284,7 @@ impl State {
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
         });
 
-        let flow_atomics = FlowAtomics {
+        let flow_atomics = flow::Atomics {
             atom_count: 0,
         };
 
@@ -304,7 +304,7 @@ impl State {
                         ty: wgpu::BindingType::UniformBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                std::mem::size_of::<FlowUniforms>() as _,
+                                std::mem::size_of::<flow::Uniforms>() as _,
                             ),
                         },
                         count: None,
@@ -315,7 +315,7 @@ impl State {
                         ty: wgpu::BindingType::StorageBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new (
-                                std::mem::size_of::<FlowAtomics>() as _,
+                                std::mem::size_of::<flow::Atomics>() as _,
                             ),
                             readonly: false,
                         },
@@ -327,7 +327,7 @@ impl State {
                         ty: wgpu::BindingType::StorageBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (NUM_FLOW * std::mem::size_of::<FlowParticle>()) as _,
+                                (NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
                             ),
                             readonly: false,
                         },
@@ -339,7 +339,7 @@ impl State {
                         ty: wgpu::BindingType::StorageBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (NUM_FLOW * std::mem::size_of::<FlowParticle>()) as _,
+                                (NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
                             ),
                             readonly: false,
                         },
@@ -432,7 +432,7 @@ impl State {
         });
 
         let mut initial_flow_data = vec![
-            FlowParticle {
+            flow::Particle {
                 pos: glam::Vec2::zero().into(),
                 vel: glam::Vec2::zero().into()
             };
