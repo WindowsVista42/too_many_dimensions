@@ -256,25 +256,26 @@ impl State {
         let flow_uniforms = FlowUniforms {
             dt: 0.0,
             count: NUM_FLOW as u32,
+            atom_count: 0,
+
             part_ext: 0.0,
             part_acc: 0.0,
             part_max: 0.0,
-            part_flag: 0,
+
             flow_scl: 0.0,
             flow_off: 0.0,
-            flow_flag: 0,
+
             coll_scl: 0.0,
-            coll_flag: 0,
+
             mani_acc: 0.0,
             mani_spd: 0.0,
-            mani_flag: 0,
+
             spaw_rate: 0.0,
             spaw_scl: 0.0,
             spaw_var: 0.0,
-            spaw_col: [0, 0, 0, 0],
-            spaw_flag: 0,
+            spaw_col: [0.0, 0.0, 0.0],
+
             accu_gain: 0.0,
-            accu_flag: 0,
         };
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
@@ -288,7 +289,7 @@ impl State {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStage::COMPUTE,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::UniformBuffer {
                             dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(

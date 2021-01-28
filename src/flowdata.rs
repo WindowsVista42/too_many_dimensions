@@ -8,37 +8,33 @@ use bytemuck::{Pod, Zeroable};
 pub struct FlowUniforms {
     pub dt:         f32,    // Simulation delta time
     pub count:      u32,    // Global particle count
+    pub atom_count: u32,    // Atomic counter for dst writing
+    // Transparency gets decided based on count //
 
     // Global Particle Settings
     pub part_ext:   f32,    // Max/Min xy before wrapping
     pub part_acc:   f32,    // Global acceleration factor
     pub part_max:   f32,    // Global max speed
-    pub part_flag:  u16,    // Global flags
 
     // Global Flow Field Settings
     pub flow_scl:   f32,    // Global flow field scale
     pub flow_off:   f32,    // Global flow field offset
-    pub flow_flag:  u16,    // Global flags
 
     // Global Collider Settings
     pub coll_scl:   f32,    // Global size factor
-    pub coll_flag:  u16,    // Global flags
 
     // Global Manipulator Settings
     pub mani_acc:   f32,    // Global inner acceleration factor
     pub mani_spd:   f32,    // Global inner speed factor
-    pub mani_flag:  u16,    // Global flags
 
     // Global Spawner Settings
     pub spaw_rate:  f32,    // Global spawn rate factor
     pub spaw_scl:   f32,    // Global radius factor
     pub spaw_var:   f32,    // Global scale variance factor
-    pub spaw_col:  [u8; 4], // Global default spawn color
-    pub spaw_flag:  u16,    // Global flags
+    pub spaw_col:  [f32; 3], // Global default spawn color
 
     // Global Accumulator Settings
     pub accu_gain:  f32,    // Global resource gain factor
-    pub accu_flag:  u16,    // Global flags
 }
 unsafe impl Pod for FlowUniforms {}
 unsafe impl Zeroable for FlowUniforms {}
@@ -64,8 +60,7 @@ pub struct FlowManipulator {
     // Has Flow Collider //
     pub accel:      f32,    // Inner particle accel
     pub speed:      f32,    // Inner particle speed
-    pub rotation:   u16,    // Map 0 -> u16::MAX to 0 -> 2pi
-    pub flags:      u8,     // Dictates manipulator characteristics
+    pub rotation:   f32,    // 0 -> 2pi
 }
 unsafe impl Pod for FlowManipulator {}
 unsafe impl Zeroable for FlowManipulator {}
@@ -83,8 +78,7 @@ pub struct FlowSpawner {
     pub rate:       f32,    // Spawn rate
     pub scale:      f32,    // Particle scale
     pub variance:   f32,    // Variance of particle scale
-    pub color:     [u8; 4], // Color of particles
-    pub flags:      u8,     // Dictates spawner characteristics
+    pub color:     [f32; 3],// Color of particles
 }
 unsafe impl Pod for FlowSpawner {}
 unsafe impl Zeroable for FlowSpawner {}
@@ -95,7 +89,6 @@ unsafe impl Zeroable for FlowSpawner {}
 pub struct FlowAccumulator {
     // Has Flow Collider //
     pub gain:       f32,    // Gain factor, larger = more
-    pub flags:      u8,     // Dictates accumulator characteristics
     // Not sure if flags are needed here
 }
 unsafe impl Pod for FlowAccumulator {}
