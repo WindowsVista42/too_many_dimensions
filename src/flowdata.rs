@@ -7,8 +7,7 @@ use bytemuck::{Pod, Zeroable};
 // Will probably have to add more in the future
 pub struct FlowUniforms {
     pub dt:         f32,    // Simulation delta time
-    pub count:      u32,    // Global particle count
-    pub atom_count: u32,    // Atomic counter for dst writing
+    pub ct:         u32,    // Global particle count
     // Transparency gets decided based on count //
 
     // Global Particle Settings
@@ -28,16 +27,22 @@ pub struct FlowUniforms {
     pub mani_spd:   f32,    // Global inner speed factor
 
     // Global Spawner Settings
-    pub spaw_rate:  f32,    // Global spawn rate factor
+    pub spaw_rte:   f32,    // Global spawn rate factor
     pub spaw_scl:   f32,    // Global radius factor
     pub spaw_var:   f32,    // Global scale variance factor
     pub spaw_col:  [f32; 3], // Global default spawn color
 
     // Global Accumulator Settings
-    pub accu_gain:  f32,    // Global resource gain factor
+    pub accu_rte:   f32,    // Global resource rate factor
 }
-unsafe impl Pod for FlowUniforms {}
-unsafe impl Zeroable for FlowUniforms {}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+#[rustfmt::skip]
+// Atomic sim info
+pub struct FlowAtomics {
+    pub atom_count: u32,    // Atomic particle count
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -47,23 +52,19 @@ unsafe impl Zeroable for FlowUniforms {}
 // Separate buffers for
 // FlowManipulators and FlowCollectors
 pub struct FlowCollider {
-    pub position:  [f32; 2],
-    pub radius:     f32,
+    pub pos:       [f32; 2],
+    pub rad:        f32,
 }
-unsafe impl Pod for FlowCollider {}
-unsafe impl Zeroable for FlowCollider {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
 pub struct FlowManipulator {
     // Has Flow Collider //
-    pub accel:      f32,    // Inner particle accel
-    pub speed:      f32,    // Inner particle speed
-    pub rotation:   f32,    // 0 -> 2pi
+    pub acc:        f32,    // Inner particle accel
+    pub spd:        f32,    // Inner particle speed
+    pub rot:        f32,    // 0 -> 2pi
 }
-unsafe impl Pod for FlowManipulator {}
-unsafe impl Zeroable for FlowManipulator {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -73,40 +74,51 @@ pub struct FlowSpawner {
     // because they spawn particles.
     // They do not need to check for collisions,
     // meaning would only bloat the FlowCollider buffers.
-    pub position:  [f32; 2],// Spawn position
-    pub radius:     f32,    // Spawn radius
-    pub rate:       f32,    // Spawn rate
-    pub scale:      f32,    // Particle scale
-    pub variance:   f32,    // Variance of particle scale
-    pub color:     [f32; 3],// Color of particles
+    pub pos:       [f32; 2],// Spawn position
+    pub rad:        f32,    // Spawn radius
+    pub rte:        f32,    // Spawn rate
+    pub scl:        f32,    // Particle scale
+    pub var:        f32,    // Variance of particle scale
+    pub col:       [f32; 3],// Color of particles
 }
-unsafe impl Pod for FlowSpawner {}
-unsafe impl Zeroable for FlowSpawner {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 #[rustfmt::skip]
 pub struct FlowAccumulator {
     // Has Flow Collider //
-    pub gain:       f32,    // Gain factor, larger = more
+    pub rte:        f32,    // Gain factor, larger = more
     // Not sure if flags are needed here
 }
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+#[rustfmt::skip]
+pub struct FlowVertex {
+    pub pos:       [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+#[rustfmt::skip]
+pub struct FlowParticle {
+    pub pos:       [f32; 2],
+    pub vel:       [f32; 2],
+}
+
+unsafe impl Pod for FlowUniforms {}
+unsafe impl Zeroable for FlowUniforms {}
+unsafe impl Pod for FlowAtomics {}
+unsafe impl Zeroable for FlowAtomics {}
+unsafe impl Pod for FlowCollider {}
+unsafe impl Zeroable for FlowCollider {}
+unsafe impl Pod for FlowManipulator {}
+unsafe impl Zeroable for FlowManipulator {}
+unsafe impl Pod for FlowSpawner {}
+unsafe impl Zeroable for FlowSpawner {}
 unsafe impl Pod for FlowAccumulator {}
 unsafe impl Zeroable for FlowAccumulator {}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct FlowVertex {
-    pub pos: [f32; 2],
-}
 unsafe impl Pod for FlowVertex {}
 unsafe impl Zeroable for FlowVertex {}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug)]
-pub struct FlowParticle {
-    pub pos: [f32; 2],
-    pub vel: [f32; 2],
-}
 unsafe impl Pod for FlowParticle {}
 unsafe impl Zeroable for FlowParticle {}

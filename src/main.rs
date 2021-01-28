@@ -25,7 +25,7 @@ const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
-const MAX_NUM_FLOW: usize = 1_000_000;
+const MAX_NUM_FLOW: usize = 1_000_000; // MAX u32 SIZE
 const NUM_FLOW: usize = 100_000;
 
 fn toggle_fullscreen(state: &mut State, window: &Window) {
@@ -255,8 +255,7 @@ impl State {
         // FLOW
         let flow_uniforms = FlowUniforms {
             dt: 0.0,
-            count: NUM_FLOW as u32,
-            atom_count: 0,
+            ct: NUM_FLOW as u32,
 
             part_ext: 0.0,
             part_acc: 0.0,
@@ -270,17 +269,27 @@ impl State {
             mani_acc: 0.0,
             mani_spd: 0.0,
 
-            spaw_rate: 0.0,
+            spaw_rte: 0.0,
             spaw_scl: 0.0,
             spaw_var: 0.0,
             spaw_col: [0.0, 0.0, 0.0],
 
-            accu_gain: 0.0,
+            accu_rte: 0.0,
         };
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
             contents: bytemuck::cast_slice(&[flow_uniforms]),
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::COPY_DST,
+        });
+
+        let flow_atomics = FlowAtomics {
+            atom_count: 0,
+        };
+
+        let flow_atomic_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("FLOW ATOMIC SIM DATA"),
+            contents: bytemuck::cast_slice(&[flow_atomics]),
+            usage: wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::COPY_DST,
         });
 
         let flow_bind_group_layout =
@@ -303,6 +312,18 @@ impl State {
                         visibility: wgpu::ShaderStage::COMPUTE,
                         ty: wgpu::BindingType::StorageBuffer {
                             dynamic: false,
+                            min_binding_size: wgpu::BufferSize::new (
+                                std::mem::size_of::<FlowAtomics>() as _,
+                            ),
+                            readonly: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStage::COMPUTE,
+                        ty: wgpu::BindingType::StorageBuffer {
+                            dynamic: false,
                             min_binding_size: wgpu::BufferSize::new(
                                 (NUM_FLOW * std::mem::size_of::<FlowParticle>()) as _,
                             ),
@@ -311,7 +332,7 @@ impl State {
                         count: None,
                     },
                     wgpu::BindGroupLayoutEntry {
-                        binding: 2,
+                        binding: 3,
                         visibility: wgpu::ShaderStage::COMPUTE,
                         ty: wgpu::BindingType::StorageBuffer {
                             dynamic: false,
@@ -453,10 +474,14 @@ impl State {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Buffer(flow_buffers[i].slice(..)),
+                        resource: wgpu::BindingResource::Buffer(flow_atomic_buffer.slice(..)),
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
+                        resource: wgpu::BindingResource::Buffer(flow_buffers[i].slice(..)),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
                         resource: wgpu::BindingResource::Buffer(
                             flow_buffers[(i + 1) % 2].slice(..),
                         ),

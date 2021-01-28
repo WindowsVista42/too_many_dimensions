@@ -51,24 +51,76 @@ float snoise(vec2 v) {
 
 layout(local_size_x = 64) in;
 
-struct Particle {
-    vec2 pos;
-    vec2 vel;
+// Ref FlowUniforms in flowdata.rs
+layout(set = 0, binding = 0) uniform FlowUniforms {
+    float dt;
+    uint  ct;
+
+    float part_ext;
+    float part_acc;
+    float part_max;
+
+    float flow_scl;
+    float flow_off;
+
+    float coll_scl;
+
+    float mani_acc;
+    float mani_spd;
+
+    float spaw_rate;
+    float spaw_scl;
+    float spaw_var;
+    vec3  spaw_col;
+
+    float accu_gain;
 };
-layout(set = 0, binding = 0) uniform FlowSim {
-    float u_dt;
-    uint u_num_flow;
+
+// Ref FlowAtomics in flowdata.rs
+layout(set = 0, binding = 1) buffer FlowAtomics {
+    uint atomic_count;
 };
-layout(set = 0, binding = 1) buffer SrcParticles {
-    Particle src[MAX_FLOW];
+
+// Ref FlowParticle in flowdata.rs
+struct FlowParticle {
+    vec2  pos;
+    vec2  vel;
 };
-layout(set = 0, binding = 2) buffer DstParticles {
-    Particle dst[MAX_FLOW];
+
+struct FlowCollider {
+    vec2  pos;
+    float rad;
+};
+
+struct FlowManipulator {
+    float acc;
+    float spd;
+    float rot;
+};
+
+struct FlowSpawner {
+    vec2  pos;
+    float rad;
+    float rte;
+    float scl;
+    float var;
+    float col;
+};
+
+struct FlowAccumulator {
+    float rte;
+};
+
+layout(set = 0, binding = 2) buffer SrcParticles {
+    FlowParticle src[MAX_FLOW];
+};
+layout(set = 0, binding = 3) buffer DstParticles {
+    FlowParticle dst[MAX_FLOW];
 };
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    if (idx > u_num_flow) { return; }
+    if (idx > ct) { return; }
 
     vec2 vpos = src[idx].pos;
     vec2 vvel = src[idx].vel;
@@ -85,11 +137,11 @@ void main() {
     */
         float dir = snoise(vpos * SCALE + OFFSET) * PI * 2.0;// 0 -> 2pi
         vdir = vec2(sin(dir), cos(dir));
-        vvel += vdir * ACCEL * u_dt;
+        vvel += vdir * ACCEL * dt;
     //}
 
-    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * u_dt;
-    vpos += vvel * u_dt;
+    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * dt;
+    vpos += vvel * dt;
 
     if      (vvel.x >  MAX_SPEED) vvel.x =  MAX_SPEED;
     else if (vvel.x < -MAX_SPEED) vvel.x = -MAX_SPEED;
