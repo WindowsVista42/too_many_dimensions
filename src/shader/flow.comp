@@ -1,8 +1,8 @@
 #version 460
 
 #define MAX_FLOW 1000000
-#define EXT 6.0
-#define INNER_EXT 2.0
+#define EXT 3.0
+#define INNER_EXT 1.0
 #define MAX_SPEED 0.5
 #define ACCEL 1.3
 #define INNER_ACCEL 1.5
@@ -107,7 +107,7 @@ layout(set = 0, binding = 0) uniform Uniforms {
 
 // Ref Atomics in flow.rs
 layout(set = 0, binding = 1) buffer Atomics {
-    uint atomic_count;
+    uint atom_ct; // Cleared to 0 every frame
 };
 
 layout(set = 0, binding = 2) buffer SrcParticles {
@@ -120,25 +120,23 @@ layout(set = 0, binding = 3) buffer DstParticles {
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx > ct) { return; }
-    atomicAdd(atomic_count, 1);
 
+    uint del = 0;
     vec2 vpos = src[idx].pos;
     vec2 vvel = src[idx].vel;
 
     vec2 vdir;
-    /*
     if (vpos.x <  INNER_EXT &&
         vpos.x > -INNER_EXT &&
         vpos.y <  INNER_EXT &&
         vpos.y > -INNER_EXT
     ) {
-        vvel += vec2(-MAX_SPEED, -MAX_SPEED) * u_dt * INNER_ACCEL;
-    } if {
-    */
+        del = 1;
+    } else {
         float dir = snoise(vpos * SCALE + OFFSET) * PI * 2.0;// 0 -> 2pi
         vdir = vec2(sin(dir), cos(dir));
         vvel += vdir * ACCEL * dt;
-    //}
+    }
 
     vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * dt;
     vpos += vvel * dt;
@@ -153,6 +151,9 @@ void main() {
     if (vpos.y < -EXT) vpos.y =  EXT;
     if (vpos.y >  EXT) vpos.y = -EXT;
 
-    dst[idx].pos = vpos;
-    dst[idx].vel = vvel;
+    if(del == 0) {
+        idx = atomicAdd(atom_ct, 1);
+        dst[idx].pos = vpos;
+        dst[idx].vel = vvel;
+    } else {}
 }
