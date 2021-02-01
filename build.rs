@@ -33,7 +33,7 @@ impl ShaderData {
             .unwrap()
             .parent()
             .unwrap()
-            .join("spir-v")
+            .join("spirv")
             .join(
                 src_path
                     .file_name()
