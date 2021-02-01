@@ -82,7 +82,6 @@ pub struct Spawner {
     pub col:       [f32; 3],// Color of particles
 }
 
-
 #[repr(C)]
 #[rustfmt::skip]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
