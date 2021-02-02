@@ -62,13 +62,13 @@ impl Camera {
 // Might need to do more with this in the future
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct ViewUniforms {
+pub struct Uniforms {
     pub view_pos: [f32; 2],
     pub view_scl: [f32; 2],
 }
-unsafe impl Pod for ViewUniforms {}
-unsafe impl Zeroable for ViewUniforms {}
-impl ViewUniforms {
+unsafe impl Pod for Uniforms {}
+unsafe impl Zeroable for Uniforms {}
+impl Uniforms {
     pub fn default() -> Self {
         Self {
             view_pos: [0.0, 0.0],

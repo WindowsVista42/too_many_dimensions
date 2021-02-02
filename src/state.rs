@@ -25,7 +25,7 @@ pub struct State {
 
     // UNIFORMS
     pub camera: view::Camera,
-    pub view_uniforms: view::ViewUniforms,
+    pub view_uniforms: view::Uniforms,
     pub view_uniform_buffer: wgpu::Buffer,
     pub view_uniform_bind_group: wgpu::BindGroup,
 
@@ -124,7 +124,7 @@ impl State {
             asp: sc_desc.width as f32 / sc_desc.height as f32,
         };
 
-        let mut view_uniforms = view::ViewUniforms::default();
+        let mut view_uniforms = view::Uniforms::default();
         view_uniforms.update_view_proj(&camera);
 
         let view_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -142,9 +142,9 @@ impl State {
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<
-                            view::ViewUniforms,
-                        >() as _),
+                        min_binding_size: wgpu::BufferSize::new(
+                            std::mem::size_of::<view::Uniforms>() as _,
+                        ),
                     },
                     count: None,
                 }],
@@ -160,29 +160,7 @@ impl State {
         });
 
         // FLOW
-        let flow_uniforms = flow::Uniforms {
-            dt: 0.0,
-            ct: NUM_FLOW as u32,
-
-            part_ext: 0.0,
-            part_acc: 0.0,
-            part_max: 0.0,
-
-            flow_scl: 0.0,
-            flow_off: 0.0,
-
-            coll_scl: 0.0,
-
-            mani_acc: 0.0,
-            mani_spd: 0.0,
-
-            spaw_rte: 0.0,
-            spaw_scl: 0.0,
-            spaw_var: 0.0,
-            spaw_col: [0.0, 0.0, 0.0],
-
-            accu_rte: 0.0,
-        };
+        let flow_uniforms = flow::CONFIG.unif;
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
             contents: bytemuck::cast_slice(&[flow_uniforms]),
@@ -199,7 +177,6 @@ impl State {
             usage: wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST
                 | wgpu::BufferUsage::COPY_SRC,
-                //| wgpu::BufferUsage::MAP_READ,
         });
 
         let flow_bind_group_layout =
@@ -240,7 +217,7 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
+                                (flow::NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
                             ),
                         },
                         count: None,
@@ -252,7 +229,7 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
+                                (flow::NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
                             ),
                         },
                         count: None,
@@ -332,12 +309,12 @@ impl State {
 
         let flow_vertices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("VERTEX BUFFER"),
-            contents: bytemuck::bytes_of(&FLOW_SHAPE_VERTICES),
+            contents: bytemuck::bytes_of(&flow::FLOW_SHAPE_VERTICES),
             usage: wgpu::BufferUsage::VERTEX | wgpu::BufferUsage::COPY_DST,
         });
         let flow_indices_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("INDEX BUFFER"),
-            contents: bytemuck::bytes_of(&FLOW_SHAPE_INDICES),
+            contents: bytemuck::bytes_of(&flow::FLOW_SHAPE_INDICES),
             usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::COPY_DST,
         });
 
@@ -346,7 +323,7 @@ impl State {
                 pos: glam::Vec2::zero().into(),
                 vel: glam::Vec2::zero().into()
             };
-            (4 * MAX_NUM_FLOW) as usize
+            (4 * flow::MAX_NUM_FLOW) as usize
         ];
         for p in initial_flow_data.iter_mut() {
             p.pos[0] = 12.0 * (rand::random::<f32>() - 0.5); // posx
@@ -400,7 +377,7 @@ impl State {
             }));
         }
 
-        let flow_work_group_count = ((NUM_FLOW as f32) / (64.0)).ceil() as u32;
+        let flow_work_group_count = ((flow::NUM_FLOW as f32) / (64.0)).ceil() as u32;
 
         let flow_num_indices = 8;
 
@@ -447,8 +424,8 @@ impl State {
             flow_num_indices,
 
             flow_work_group_count,
-            flow_cap: MAX_NUM_FLOW as u32,
-            flow_count: NUM_FLOW as u32,
+            flow_cap: flow::MAX_NUM_FLOW as u32,
+            flow_count: flow::NUM_FLOW as u32,
 
             multisampled_framebuffer: None,
 
@@ -656,18 +633,16 @@ impl State {
             rpass.draw_indexed(0..self.flow_num_indices, 0, 0..self.flow_count as _);
         }
 
-
         self.queue.submit(std::iter::once(encoder.finish()));
 
         self.update_time_info();
-
     }
 
     fn update_view_uniforms(&mut self) {
         self.view_uniforms.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.view_uniform_buffer,
-            offset_of!(view::ViewUniforms, view_pos) as _,
+            offset_of!(view::Uniforms, view_pos) as _,
             bytemuck::cast_slice(&[self.view_uniforms]),
         );
     }
