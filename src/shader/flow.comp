@@ -1,7 +1,7 @@
 #version 460
 
 #define MAX_FLOW 1000000
-#define EXT 3.0
+#define EXT 6.0
 #define INNER_EXT 1.0
 #define MAX_SPEED 0.5
 #define ACCEL 1.3
@@ -85,9 +85,9 @@ layout(set = 0, binding = 0) uniform Uniforms {
     float dt;
     uint  ct;
 
-    float part_ext;
-    float part_acc;
-    float part_max;
+    float flow_ext;
+    float flow_acc;
+    float flow_max;
 
     float flow_scl;
     float flow_off;
@@ -126,30 +126,34 @@ void main() {
     vec2 vvel = src[idx].vel;
 
     vec2 vdir;
+    /*
     if (vpos.x <  INNER_EXT &&
         vpos.x > -INNER_EXT &&
         vpos.y <  INNER_EXT &&
         vpos.y > -INNER_EXT
     ) {
-        del = 1;
+        del = 0;
     } else {
-        float dir = snoise(vpos * SCALE + OFFSET) * PI * 2.0;// 0 -> 2pi
+    */
+        float dir = snoise(vpos * flow_scl + flow_off) * PI * 2.0; // 0 -> 2pi
         vdir = vec2(sin(dir), cos(dir));
-        vvel += vdir * ACCEL * dt;
-    }
+        vvel += vdir * flow_acc * dt;
+    //}
 
     vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * dt;
     vpos += vvel * dt;
 
-    if      (vvel.x >  MAX_SPEED) vvel.x =  MAX_SPEED;
-    else if (vvel.x < -MAX_SPEED) vvel.x = -MAX_SPEED;
-    if      (vvel.y >  MAX_SPEED) vvel.y =  MAX_SPEED;
-    else if (vvel.y < -MAX_SPEED) vvel.y = -MAX_SPEED;
+    // Really shitty speed capping
+    if      (vvel.x >  flow_max) vvel.x =  flow_max;
+    else if (vvel.x < -flow_max) vvel.x = -flow_max;
+    if      (vvel.y >  flow_max) vvel.y =  flow_max;
+    else if (vvel.y < -flow_max) vvel.y = -flow_max;
 
-    if (vpos.x < -EXT) vpos.x =  EXT;
-    if (vpos.x >  EXT) vpos.x = -EXT;
-    if (vpos.y < -EXT) vpos.y =  EXT;
-    if (vpos.y >  EXT) vpos.y = -EXT;
+    // Position wrapping
+    if (vpos.x < -flow_ext) vpos.x =  flow_ext;
+    if (vpos.x >  flow_ext) vpos.x = -flow_ext;
+    if (vpos.y < -flow_ext) vpos.y =  flow_ext;
+    if (vpos.y >  flow_ext) vpos.y = -flow_ext;
 
     if(del == 0) {
         idx = atomicAdd(atom_ct, 1);

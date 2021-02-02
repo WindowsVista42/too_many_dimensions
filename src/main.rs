@@ -1,10 +1,10 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
 mod flow;
-mod view;
 mod state;
+mod view;
 
-use futures::executor::block_on;
+use pollster::block_on;
 use state::*;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};

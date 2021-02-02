@@ -1,27 +1,11 @@
 use crate::{flow, view};
-use winit::event::{VirtualKeyCode, Event};
-use wgpu::util::DeviceExt;
-use futures::executor::block_on;
-use winit_input_helper::WinitInputHelper;
-use winit::window::Window;
 use memoffset::*;
+use pollster::block_on;
+use wgpu::util::DeviceExt;
+use winit::event::{Event, VirtualKeyCode};
+use winit::window::Window;
+use winit_input_helper::WinitInputHelper;
 
-#[rustfmt::skip]
-pub const FLOW_SHAPE_VERTICES: [flow::Vertex; 4] = [
-    flow::Vertex { pos: [-0.01, -0.01], },
-    flow::Vertex { pos: [-0.01,  0.01], },
-    flow::Vertex { pos: [ 0.01,  0.01], },
-    flow::Vertex { pos: [ 0.01, -0.01], },
-];
-
-#[rustfmt::skip]
-pub const FLOW_SHAPE_INDICES: [u16; 6] = [
-    0, 1, 2,
-    0, 2, 3,
-];
-
-pub const MAX_NUM_FLOW: usize = 1_000_000; // MAX u32 SIZE
-pub const NUM_FLOW: usize = 1_000_000;
 pub struct State {
     // INPUT
     pub input: WinitInputHelper,
@@ -570,8 +554,6 @@ impl State {
             cpass.set_pipeline(&self.flow_compute_pipeline);
             cpass.set_bind_group(0, &self.flow_bind_groups[self.flow_buff_idx], &[]);
             cpass.dispatch(self.flow_work_group_count, 1, 1);
-
-
         }
 
         if !self.pause {
