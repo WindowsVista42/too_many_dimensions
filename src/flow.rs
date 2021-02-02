@@ -1,5 +1,48 @@
 use bytemuck::{Pod, Zeroable};
 
+#[rustfmt::skip]
+pub const FLOW_SHAPE_VERTICES: [Vertex; 4] = [
+    Vertex { pos: [-0.01, -0.01], },
+    Vertex { pos: [-0.01,  0.01], },
+    Vertex { pos: [ 0.01,  0.01], },
+    Vertex { pos: [ 0.01, -0.01], },
+];
+
+#[rustfmt::skip]
+pub const FLOW_SHAPE_INDICES: [u16; 6] = [
+    0, 1, 2,
+    0, 2, 3,
+];
+
+pub const MAX_NUM_FLOW: usize = 1_000_000; // MAX u32 SIZE
+pub const NUM_FLOW: usize = 1_000_000;
+
+pub const CONFIG: Config = Config {
+    unif: Uniforms {
+        dt: 0.0,
+        ct: NUM_FLOW as u32,
+
+        part_ext: 12.0,
+        part_acc: 1.3,
+        part_max: 0.5,
+
+        flow_scl: 0.5,
+        flow_off: [123.0, 934.0],
+
+        coll_scl: 0.0,
+
+        mani_acc: 1.5,
+        mani_spd: 1.0,
+
+        spaw_rte: 1.0,
+        spaw_scl: 1.0,
+        spaw_var: 1.0,
+        spaw_col: [1.0, 1.0, 1.0],
+
+        accu_rte: 1.0
+    },
+};
+
 #[repr(C)]
 #[rustfmt::skip]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
@@ -17,7 +60,7 @@ pub struct Uniforms {
 
     // Global Flow Field Settings
     pub flow_scl:   f32,    // Global flow field scale
-    pub flow_off:   f32,    // Global flow field offset
+    pub flow_off:  [f32; 2],    // Global flow field offset
 
     // Global Collider Settings
     pub coll_scl:   f32,    // Global size factor
@@ -30,7 +73,7 @@ pub struct Uniforms {
     pub spaw_rte:   f32,    // Global spawn rate factor
     pub spaw_scl:   f32,    // Global radius factor
     pub spaw_var:   f32,    // Global scale variance factor
-    pub spaw_col:  [f32; 3], // Global default spawn color
+    pub spaw_col:  [f32; 3],// Global default spawn color
 
     // Global Accumulator Settings
     pub accu_rte:   f32,    // Global resource rate factor
@@ -104,4 +147,10 @@ pub struct Vertex {
 pub struct Particle {
     pub pos:       [f32; 2],
     pub vel:       [f32; 2],
+}
+
+#[rustfmt::skip]
+#[derive(Copy, Clone, Debug)]
+pub struct Config {
+    pub unif: Uniforms,
 }
