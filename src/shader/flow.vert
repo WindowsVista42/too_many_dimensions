@@ -2,6 +2,10 @@
 
 #define _PI 3.141592653589793238
 
+float map(float value, float min1, float max1, float min2, float max2) {
+    return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
+}
+
 layout(location = 0) in vec2 aflowpos; // Flow position
 layout(location = 1) in vec2 aflowvel; // Flow velocity
 layout(location = 2) in vec2 apos; // Vertex position
