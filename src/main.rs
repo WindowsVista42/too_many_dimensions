@@ -21,6 +21,7 @@ use winit::window::{Window, WindowBuilder};
 
 /// Toggle windows fullscreen setting when called
 fn toggle_fullscreen(state: &mut State, window: &Window) {
+    debug_info!("Fullscreen Toggled");
     if state.fullscreen {
         window.set_fullscreen(None);
         state.fullscreen = false;
@@ -43,13 +44,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .rotate(
         flexi_logger::Criterion::Size(u64::MAX),
         flexi_logger::Naming::Numbers,
-        flexi_logger::Cleanup::KeepLogAndCompressedFiles(2, 15),
+        flexi_logger::Cleanup::KeepLogAndCompressedFiles(1, 15),
     )
     .create_symlink("current_run")
     .start()?;
 
     debug!("{}", chrono::Local::now().format("%Y-%m-%d_%H-%M-%S"));
-    debug_info!("Program Start");
+    debug_info!("Program Start (0s)");
 
     let mut exited = false;
 
@@ -112,6 +113,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 event: WindowEvent::Resized(physical_size),
                 ..
             } => {
+                debug_info!("Window Resized");
                 state.resize(physical_size);
             }
             Event::MainEventsCleared => {

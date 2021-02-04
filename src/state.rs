@@ -69,6 +69,7 @@ pub struct State {
 
 impl State {
     pub async fn new(window: &Window, sample_count: u32) -> Self {
+        let now = std::time::Instant::now();
         // INPUT
         let input = WinitInputHelper::new();
 
@@ -76,6 +77,7 @@ impl State {
         let fullscreen = window.fullscreen().is_some();
 
         // INSTANCE
+        debug_info!("Instance ({} ms)", now.elapsed().as_millis());
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
         let surface = unsafe { instance.create_surface(window) };
@@ -110,6 +112,7 @@ impl State {
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         // SHADER LOADING
+        debug_info!("Shader Loading ({} ms)", now.elapsed().as_millis());
         let flow_cs_module =
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
         let flow_vs_module =
@@ -118,6 +121,7 @@ impl State {
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
 
         // UNIFORMS
+        debug_info!("View Uniforms ({} ms)", now.elapsed().as_millis());
         let camera = view::Camera {
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
@@ -162,6 +166,7 @@ impl State {
         });
 
         // FLOW
+        debug_info!("Flow ({} ms)", now.elapsed().as_millis());
         let flow_uniforms = flow::CONFIG.uniforms;
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
@@ -320,6 +325,7 @@ impl State {
             usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::COPY_DST,
         });
 
+        debug_info!("Initial Flow Data ({} ms)", now.elapsed().as_millis());
         let mut initial_flow_data = vec![
             flow::Particle {
                 pos: glam::Vec2::zero().into(),
@@ -439,6 +445,10 @@ impl State {
             active: Some(0),
         };
 
+        debug_info!(
+            "Multisampled Framebuffer ({} ms)",
+            now.elapsed().as_millis()
+        );
         s.create_multisampled_framebuffer();
 
         s
