@@ -17,7 +17,7 @@ rpath = false
 
 [profile.release]
 lto = true
-panic = 'abort'
+panic = 'unwind'
 
 [build-dependencies]
 anyhow = "1.0.38"

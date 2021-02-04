@@ -1,5 +1,11 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
+macro_rules! debug_info {
+    ($($arg:tt)*) => {
+        log!(log::Level::Info, "{}, {}:{}:{}", format!($($arg)*), file!(), line!(), column!());
+    };
+}
+
 #[macro_use]
 extern crate log;
 
@@ -27,9 +33,6 @@ fn toggle_fullscreen(state: &mut State, window: &Window) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let p_st = std::time::Instant::now();
 
-    let local_now = chrono::Local::now();
-    let name_format = local_now.format("%Y-%m-%d-%H-%M-%S");
-
     flexi_logger::Logger::with(
         flexi_logger::LogSpecification::default(flexi_logger::LevelFilter::max()).build(),
     )
@@ -40,36 +43,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .rotate(
         flexi_logger::Criterion::Size(u64::MAX),
         flexi_logger::Naming::Numbers,
-        flexi_logger::Cleanup::KeepCompressedFiles(usize::MAX),
+        flexi_logger::Cleanup::KeepLogAndCompressedFiles(2, 15),
     )
     .create_symlink("current_run")
     .start()?;
 
-    info!("{}", name_format);
-    info!("Program Start");
+    debug!("{}", chrono::Local::now().format("%Y-%m-%d_%H-%M-%S"));
+    debug_info!("Program Start");
 
     let mut exited = false;
 
     let event_loop = EventLoop::new();
-    info!("Event Loop Created");
+    debug_info!("Event Loop Created");
 
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
         .build(&event_loop)
         .unwrap();
-    info!("Window Created");
+    debug_info!("Window Created");
 
     let now = std::time::Instant::now();
-    info!("State Start");
+    debug_info!("State Start");
     let mut state = block_on(State::new(&window, 8));
-    info!("State End ({} ms)", now.elapsed().as_millis());
+    debug_info!("State End ({} ms)", now.elapsed().as_millis());
 
     event_loop.run(move |event, _, control_flow| {
         state.update(&event);
         if state.quit {
             *control_flow = ControlFlow::Exit;
             if !exited {
-                info!("Program Close ({} s)", p_st.elapsed().as_secs());
+                debug_info!("Program Close ({} s)", p_st.elapsed().as_secs());
                 exited = true;
             }
             return;
