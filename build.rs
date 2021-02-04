@@ -27,12 +27,8 @@ impl ShaderData {
 
         let src = read_to_string(src_path.clone())?;
         let spv_path = src_path
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
+            .join("../../..") // ROOT PROJECT DIR
+            .canonicalize()?
             .join("spirv")
             .join(
                 src_path
@@ -63,7 +59,7 @@ fn main() -> Result<()> {
     let shaders = shader_paths
         .into_par_iter()
         .flatten()
-        .map(|glob_result| ShaderData::load(glob_result.clone()))
+        .map(ShaderData::load)
         .collect::<Vec<Result<_>>>()
         .into_iter()
         .collect::<Result<Vec<_>>>()?;
