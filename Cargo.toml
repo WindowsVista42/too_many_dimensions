@@ -12,7 +12,7 @@ overflow-checks = false
 lto = false
 panic = 'unwind'
 incremental = false
-codegen-units = 128
+codegen-units = 64
 rpath = false
 
 [profile.release]
@@ -32,6 +32,7 @@ chrono = "0.4.19"
 flexi_logger = { version = "0.17.1", features = ["compress"] }
 glam = "0.12.0"
 log = "0.4.4"
+log-panics = "2.0.0"
 memoffset = { version = "0.6.1", features = ["unstable_const"] }
 pollster = "0.2.1"
 rand = "0.8.1"

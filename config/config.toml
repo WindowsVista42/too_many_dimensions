@@ -1,5 +1,5 @@
 [flow]
-initial_count = 0
+initial_count = 1000000
 flow_extent = 12.0
 flow_acceleration = 2.5
 flow_max_speed = 0.9
