@@ -10,6 +10,7 @@ use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEve
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 
+/// Toggle windows fullscreen setting when called
 fn toggle_fullscreen(state: &mut State, window: &Window) {
     if state.fullscreen {
         window.set_fullscreen(None);

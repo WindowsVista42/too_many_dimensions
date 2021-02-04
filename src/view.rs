@@ -2,8 +2,8 @@ use bytemuck::{Pod, Zeroable};
 use winit::event::VirtualKeyCode;
 use winit_input_helper::WinitInputHelper;
 
-// Top-down 2D camera
 #[derive(Debug)]
+/// Top-down 2D camera
 pub struct Camera {
     // Movement
     pub slow_spd: f32,
@@ -15,7 +15,7 @@ pub struct Camera {
     pub asp: f32,
 }
 impl Camera {
-    // Camera controller
+    /// Camera controller function
     pub fn update(&mut self, input: &WinitInputHelper, delta: f32) -> bool {
         let mut changed = false;
         // Moving around the camera
@@ -59,9 +59,10 @@ impl Camera {
     }
 }
 
-// Might need to do more with this in the future
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+/// Camera uniforms including view projection
+// Might need to do more with this in the future
 pub struct Uniforms {
     pub view_pos: [f32; 2],
     pub view_scl: [f32; 2],
@@ -76,6 +77,7 @@ impl Uniforms {
         }
     }
 
+    /// Update the view projection based on the camera
     pub fn update_view_proj(&mut self, camera: &Camera) {
         if camera.asp > 1.0 {
             self.view_pos = camera.pos.into();

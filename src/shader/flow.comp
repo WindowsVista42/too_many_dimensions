@@ -20,7 +20,7 @@ float noise(float p) {
     return mix(rand(fl), rand(fl + 1.0), fc);
 }
 
-// Simplex 2D noise
+/// Simplex 2D noise
 vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
 
 float snoise(vec2 v) {
@@ -50,7 +50,7 @@ float snoise(vec2 v) {
     return 130.0 * dot(m, g);
 }
 
-// Ref Particle in flow.rs
+/// Ref Particle in flow.rs
 struct Particle {
     vec2  pos;
     vec2  vel;
@@ -104,12 +104,12 @@ layout(set = 0, binding = 0) uniform Uniforms {
 
     float accu_rte;
 };
-
-// Ref Atomics in flow.rs
+/// Ref Atomics in flow.rs
 layout(set = 0, binding = 1) buffer Atomics {
     uint atom_ct; // Cleared to 0 every frame
 };
 
+/// Ref Particle in flow.rs
 layout(set = 0, binding = 2) buffer SrcParticles {
     Particle src[MAX_FLOW];
 };
@@ -117,6 +117,35 @@ layout(set = 0, binding = 3) buffer DstParticles {
     Particle dst[MAX_FLOW];
 };
 
+/// Ref Collider and Spawner in flow.rs
+layout(set = 0, binding = 4) buffer SpawnerColliders {
+    Collider spaw_coll[MAX_SPAW];
+};
+layout(set = 0, binding = 5) buffer Spawners {
+    Spawner spaw[MAX_SPAW];
+};
+
+/// Ref Collider and Manipulator in flow.rs
+layout(set = 0, binding = 6) buffer ManipulatorColliders {
+    Collider mani_coll[MAX_SPAW];
+};
+layout(set = 0, binding = 7) buffer Manipulators {
+    Manipulator mani[MAX_SPAW];
+};
+
+/// Ref Collider and Accumulator in flow.rs
+layout(set = 0, binding = 8) buffer AccumulatorColliders {
+    Collider accu_coll[MAX_SPAW];
+};
+layout(set = 0, binding = 9) buffer Accumulators {
+    Accumulator accu[MAX_SPAW];
+};
+
+// Check if we need to create a particle
+// Increment atomic counter
+// Check if we can be deleted then early return
+// Move our particle
+// Increment atomic counter
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx > ct) { return; }

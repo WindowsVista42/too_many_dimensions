@@ -16,7 +16,8 @@ pub struct State {
     // FLAGS
     pub quit: bool,
     pub pause: bool,
-    pub fullscreen: bool, // Modified externally
+    /// Modified externally
+    pub fullscreen: bool,
 
     // INSTANCE
     pub surface: wgpu::Surface,
@@ -44,15 +45,16 @@ pub struct State {
     pub flow_uniform_buffer: wgpu::Buffer,
     pub flow_atomics: flow::Atomics,
     pub flow_atomic_buffer: wgpu::Buffer,
-    pub flow_bind_groups: Vec<wgpu::BindGroup>, // Alternating buffer
-    pub flow_buffers: Vec<wgpu::Buffer>,        // Alternating buffer
-
+    pub flow_bind_groups: Vec<wgpu::BindGroup>,
+    /// Alternating buffer
+    pub flow_buffers: Vec<wgpu::Buffer>,
+    /// Alternating buffer
     pub flow_vertices_buffer: wgpu::Buffer,
     pub flow_indices_buffer: wgpu::Buffer,
     pub flow_num_indices: u32,
-
     pub flow_work_group_count: u32,
-    pub flow_buff_idx: usize, // Buffer idx for compute
+    /// Buffer idx for compute
+    pub flow_buff_idx: usize,
     pub flow_cap: u32,
     pub flow_count: u32,
 
