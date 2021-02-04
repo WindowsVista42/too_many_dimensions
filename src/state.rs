@@ -654,6 +654,7 @@ impl State {
         self.queue.submit(std::iter::once(encoder.finish()));
 
         self.update_time_info();
+        assert!(self.flow_count <= flow::MAX_NUM_FLOW as u32);
     }
 
     fn update_view_uniforms(&mut self) {

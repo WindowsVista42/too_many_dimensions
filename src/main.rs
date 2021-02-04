@@ -63,6 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .create_symlink("current_run")
     .start()?;
+    log_panics::init();
 
     debug!(
         "Logger Started: {}\n",
