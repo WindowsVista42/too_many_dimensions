@@ -1,14 +1,11 @@
 #version 460
 
-#define MAX_FLOW 1000000
-#define EXT 6.0
-#define INNER_EXT 1.0
-#define MAX_SPEED 0.5
-#define ACCEL 1.3
-#define INNER_ACCEL 1.5
+#define MAX_SPAW 400
+#define MAX_MANI 400
+#define MAX_ACCU 400
+#define MAX_FLOW 5000000
+
 #define PI 3.141592653589793238
-#define SCALE 0.5
-#define OFFSET vec2(123.0, 934.0)
 
 layout(local_size_x = 64) in;
 
@@ -88,20 +85,23 @@ layout(set = 0, binding = 0) uniform Uniforms {
     float flow_ext;
     float flow_acc;
     float flow_max;
-
     float flow_scl;
-    float flow_off;
+    float flow_jit;
+    vec2  flow_off;
 
     float coll_scl;
 
+    uint  mani_ct;
     float mani_acc;
     float mani_spd;
 
+    uint  spaw_ct;
     float spaw_rte;
     float spaw_scl;
     float spaw_var;
     vec3  spaw_col;
 
+    uint  accu_ct;
     float accu_rte;
 };
 /// Ref Atomics in flow.rs
