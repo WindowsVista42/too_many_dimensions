@@ -55,7 +55,7 @@ struct Particle {
 
 struct Collider {
     vec2  pos;
-    float rad;
+    float rad2;
 };
 
 struct Manipulator {
@@ -147,32 +147,41 @@ layout(set = 0, binding = 9) buffer Accumulators {
 // Move our particle
 // Increment atomic counter
 void main() {
-    uint idx = gl_GlobalInvocationID.x;
-    if (idx > ct) { return; }
+    for(uint i = 0; i < spaw_ct; i++) {
+        // IF SOME CONDITION
+            // SPAWN A PARTICLE
+            // INCREMENT ATOMIC COUNTER
+    }
 
-    uint del = 0;
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx > ct) return;
+
     vec2 vpos = src[idx].pos;
     vec2 vvel = src[idx].vel;
 
-    vec2 vdir;
-    /*
-    if (vpos.x <  INNER_EXT &&
-        vpos.x > -INNER_EXT &&
-        vpos.y <  INNER_EXT &&
-        vpos.y > -INNER_EXT
-    ) {
-        del = 0;
-    } else {
-    */
-        float dir = snoise(vpos * flow_scl + flow_off) * PI * 2.0; // 0 -> 2pi
-        vdir = vec2(sin(dir), cos(dir));
-        vvel += vdir * flow_acc * dt;
-    //}
+    // COLLIDER -> vec2 & float -> pos & rad2
+    for (uint i = 0; i < accu_ct; i++) {
+        const vec2  coll_pos = accu_coll[i].pos;
+        const float coll_rad2 = accu_coll[i].rad2;
 
-    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * 1.2 * dt;
+        const vec2  prod = (coll_pos.xy - vpos.xy);
+        const float prod2 = (prod.x * prod.x) + (prod.y * prod.y);
+
+        // Early return, effectively deleting the particle
+        // TODO: Count this towards some objective, likely a uniform
+        if(prod2 < coll_rad2) { return; }
+    }
+
+    // Flow field movement
+    const float dir = snoise(vpos * flow_scl + flow_off) * 2.0 * PI; // 0 -> 2pi
+    const vec2 vdir = vec2(sin(dir), cos(dir));
+    vvel += vdir * flow_acc * dt;
+
+    // Random position jitter
+    vvel += (vec2(rand(vvel.x * 10.0), rand(vvel.y * 10.0)) - 0.5) * flow_jit * dt;
     vpos += vvel * dt;
 
-    // Really shitty speed capping
+    // Really shitty speed capping, but it looks cool
     if      (vvel.x >  flow_max) vvel.x =  flow_max;
     else if (vvel.x < -flow_max) vvel.x = -flow_max;
     if      (vvel.y >  flow_max) vvel.y =  flow_max;
@@ -184,9 +193,8 @@ void main() {
     if (vpos.y < -flow_ext) vpos.y =  flow_ext;
     if (vpos.y >  flow_ext) vpos.y = -flow_ext;
 
-    if(del == 0) {
-        idx = atomicAdd(atom_ct, 1);
-        dst[idx].pos = vpos;
-        dst[idx].vel = vvel;
-    } else {}
+
+    idx = atomicAdd(atom_ct, 1);
+    dst[idx].pos = vpos;
+    dst[idx].vel = vvel;
 }
