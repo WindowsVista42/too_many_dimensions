@@ -15,6 +15,7 @@ pub const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
+// flow.comp
 pub const MAX_NUM_FLOW: usize = 3_000_000;
 pub const MAX_NUM_SPAW: usize = 1_000;
 pub const MAX_NUM_MANI: usize = 1_000;
