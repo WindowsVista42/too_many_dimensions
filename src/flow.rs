@@ -15,32 +15,38 @@ pub const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
-pub const MAX_NUM_FLOW: usize = 15_000_000;
+pub const MAX_NUM_FLOW: usize = 3_000_000;
+pub const MAX_NUM_SPAW: usize = 1_000;
+pub const MAX_NUM_MANI: usize = 1_000;
+pub const MAX_NUM_ACCU: usize = 1_000;
 
 #[rustfmt::skip]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
-    initial_count: u32,
+    initial_count:              u32,
 
-    flow_extent: f32,
-    flow_acceleration: f32,
-    flow_max_speed: f32,
-    flow_scale: f32,
-    flow_jitter: f32,
-    flow_offset: [f32; 2],
+    flow_extent:                f32,
+    flow_acceleration:          f32,
+    flow_max_speed:             f32,
+    flow_scale:                 f32,
+    flow_jitter:                f32,
+    flow_offset:               [f32; 2],
     
-    collider_scale: f32,
+    collider_scale:             f32,
     
-    manipulator_acceleration: f32,
-    manipulator_speed_factor: f32,
+    initial_manipulator_count:  u32,
+    manipulator_acceleration:   f32,
+    manipulator_speed_factor:   f32,
     
-    spawner_spawn_rate: f32,
-    spawner_scale: f32,
-    spawner_variance: f32,
-    spawner_color: [f32; 3],
+    initial_spawner_count:      u32,
+    spawner_spawn_rate:         f32,
+    spawner_scale:              f32,
+    spawner_variance:           f32,
+    spawner_color:             [f32; 3],
     
-    accumulator_rate: f32,
-    accumulator_scale: f32,
+    initial_accumulator_count:  u32,
+    accumulator_rate:           f32,
+    accumulator_scale:          f32,
 }
 impl From<Uniforms> for Config {
     fn from(uniforms: Uniforms) -> Self {
@@ -53,12 +59,15 @@ impl From<Uniforms> for Config {
             flow_jitter: uniforms.flow_jit,
             flow_offset: uniforms.flow_off,
             collider_scale: uniforms.coll_scl,
+            initial_manipulator_count: uniforms.mani_ct,
             manipulator_acceleration: uniforms.mani_acc,
             manipulator_speed_factor: uniforms.mani_spd,
+            initial_spawner_count: uniforms.spaw_ct,
             spawner_spawn_rate: uniforms.spaw_rte,
             spawner_scale: uniforms.spaw_scl,
             spawner_variance: uniforms.spaw_var,
             spawner_color: uniforms.spaw_col,
+            initial_accumulator_count: uniforms.accu_ct,
             accumulator_rate: uniforms.accu_rte,
             accumulator_scale: uniforms.accu_scl,
         }
@@ -136,15 +145,15 @@ impl From<Config> for Uniforms {
             flow_jit: config.flow_jitter,
             flow_off: config.flow_offset,
             coll_scl: config.collider_scale,
-            mani_ct: 0,
+            mani_ct: config.initial_manipulator_count,
             mani_acc: config.manipulator_acceleration,
             mani_spd: config.manipulator_speed_factor,
-            spaw_ct: 0,
+            spaw_ct: config.initial_spawner_count,
             spaw_rte: config.spawner_spawn_rate,
             spaw_scl: config.spawner_scale,
             spaw_var: config.spawner_variance,
             spaw_col: config.spawner_color,
-            accu_ct: 0,
+            accu_ct: config.initial_accumulator_count,
             accu_rte: config.accumulator_rate,
             accu_scl: config.accumulator_scale,
         }
@@ -200,15 +209,23 @@ pub struct Spawner {
     /// Spawn position
     pub pos:       [f32; 2],
     /// Spawn radius
-    pub rad:        f32,
-    /// Spawn rate
-    pub rte:        f32,
+    pub rad2:       f32,
     /// Particle scale
     pub scl:        f32,
     /// Variance of particle scale
     pub var:        f32,
     /// Color of particles
     pub col:       [f32; 3],
+}
+
+#[repr(C)]
+#[rustfmt::skip]
+#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+/// Flow particle spawner 'collider'
+/// Effectively houses hot data
+pub struct SpawnerCollider {
+    /// Spawn rate
+    pub rte:        f32,
 }
 
 #[repr(C)]
