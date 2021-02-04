@@ -1,5 +1,5 @@
 [flow]
-initial_count = 1000000
+initial_count = 100000
 flow_extent = 12.0
 flow_acceleration = 2.5
 flow_max_speed = 0.9
@@ -7,12 +7,18 @@ flow_scale = 0.3
 flow_jitter = 4.0
 flow_offset = [123.0, 934.0]
 collider_scale = 0.0
+
+initial_manipulator_count = 10
 manipulator_acceleration = 1.5
 manipulator_speed_factor = 1.0
+
+initial_spawner_count = 10
 spawner_spawn_rate = 1.0
 spawner_scale = 1.0
 spawner_variance = 1.0
 spawner_color = [1.0, 1.0, 1.0]
+
+initial_accumulator_count = 10
 accumulator_rate = 1.0
 accumulator_scale = 1.0
 
