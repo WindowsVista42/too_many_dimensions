@@ -2,10 +2,10 @@ use bytemuck::{Pod, Zeroable};
 
 #[rustfmt::skip]
 pub const FLOW_SHAPE_VERTICES: [Vertex; 4] = [
-    Vertex { pos: [-0.01, -0.01], },
-    Vertex { pos: [-0.01,  0.01], },
-    Vertex { pos: [ 0.01,  0.01], },
-    Vertex { pos: [ 0.01, -0.01], },
+    Vertex { pos: [-0.02, -0.02], },
+    Vertex { pos: [-0.02,  0.02], },
+    Vertex { pos: [ 0.02,  0.02], },
+    Vertex { pos: [ 0.02, -0.02], },
 ];
 
 #[rustfmt::skip]
@@ -14,34 +14,37 @@ pub const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
-pub const MAX_NUM_FLOW: usize = 1_000_000; // MAX u32 SIZE
+pub const MAX_NUM_FLOW: usize = 1_000_000;
 pub const NUM_FLOW: usize = 1_000_000;
 
 #[rustfmt::skip]
 /// Default values for flow sim
 pub const CONFIG: Config = Config {
-    unif: Uniforms {
-        dt: 0.0,
-        ct: NUM_FLOW as u32,
+    uniforms: Uniforms {
+        dt:         0.0,
+        ct:         NUM_FLOW as u32,
 
-        part_ext: 12.0,
-        part_acc: 1.3,
-        part_max: 0.5,
+        flow_ext:   12.0,
+        flow_acc:   2.5,
+        flow_max:   0.9,
+        flow_scl:   0.3,
+        flow_jit:   4.0,
+        flow_off:  [123.0, 934.0],
 
-        flow_scl: 0.5,
-        flow_off: [123.0, 934.0],
+        coll_scl:   0.0,
 
-        coll_scl: 0.0,
+        mani_ct:    0,
+        mani_acc:   1.5,
+        mani_spd:   1.0,
 
-        mani_acc: 1.5,
-        mani_spd: 1.0,
+        spaw_ct:    0,
+        spaw_rte:   1.0,
+        spaw_scl:   1.0,
+        spaw_var:   1.0,
+        spaw_col:  [1.0, 1.0, 1.0],
 
-        spaw_rte: 1.0,
-        spaw_scl: 1.0,
-        spaw_var: 1.0,
-        spaw_col: [1.0, 1.0, 1.0],
-
-        accu_rte: 1.0
+        accu_ct:    0,
+        accu_rte:   1.0,
     },
 };
 

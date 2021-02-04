@@ -162,7 +162,7 @@ impl State {
         });
 
         // FLOW
-        let flow_uniforms = flow::CONFIG.unif;
+        let flow_uniforms = flow::CONFIG.uniforms;
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
             contents: bytemuck::cast_slice(&[flow_uniforms]),
@@ -598,9 +598,9 @@ impl State {
         {
             let ops = wgpu::Operations {
                 load: wgpu::LoadOp::Clear(wgpu::Color {
-                    r: 0.005,
-                    g: 0.005,
-                    b: 0.005,
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
                     a: 1.0,
                 }),
                 store: true,
