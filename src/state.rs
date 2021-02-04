@@ -73,10 +73,7 @@ impl State {
         let input = WinitInputHelper::new();
 
         // FLAGS
-        let fullscreen = match window.fullscreen() {
-            Some(_) => true,
-            None => false,
-        };
+        let fullscreen = window.fullscreen().is_some();
 
         // INSTANCE
         let size = window.inner_size();
@@ -542,7 +539,7 @@ impl State {
 
         if !self.pause {
             self.queue
-                .write_buffer(&self.flow_atomic_buffer, 0 as _, bytemuck::cast_slice(&[0]));
+                .write_buffer(&self.flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
 
             encoder.copy_buffer_to_buffer(
                 &self.flow_atomic_buffer,
