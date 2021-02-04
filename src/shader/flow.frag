@@ -8,6 +8,37 @@ vec3 filmic(vec3 x) {
     return result;
 }
 
+/*
+// Ref Uniforms in flow.rs
+layout(set = 0, binding = 0) uniform Uniforms {
+    float dt;
+    uint  ct;
+
+    float flow_ext;
+    float flow_acc;
+    float flow_max;
+    float flow_scl;
+    float flow_jit;
+    vec2  flow_off;
+
+    float coll_scl;
+
+    uint  mani_ct;
+    float mani_acc;
+    float mani_spd;
+
+    uint  spaw_ct;
+    float spaw_rte;
+    float spaw_scl;
+    float spaw_var;
+    vec3  spaw_col;
+
+    uint  accu_ct;
+    float accu_rte;
+    float accu_scl;
+};
+*/
+
 // Lol what you can just insert these at random
 layout(location = 0) in vec3 v_col; // Linear space
 

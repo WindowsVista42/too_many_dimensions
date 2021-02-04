@@ -6,6 +6,37 @@ float map(float value, float min1, float max1, float min2, float max2) {
     return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
 }
 
+/*
+// Ref Uniforms in flow.rs
+layout(set = 0, binding = 0) uniform FlowUniforms {
+    float dt;
+    uint  ct;
+
+    float flow_ext;
+    float flow_acc;
+    float flow_max;
+    float flow_scl;
+    float flow_jit;
+    vec2  flow_off;
+
+    float coll_scl;
+
+    uint  mani_ct;
+    float mani_acc;
+    float mani_spd;
+
+    uint  spaw_ct;
+    float spaw_rte;
+    float spaw_scl;
+    float spaw_var;
+    vec3  spaw_col;
+
+    uint  accu_ct;
+    float accu_rte;
+    float accu_scl;
+};
+*/
+
 layout(location = 0) in vec2 aflowpos; // Flow position
 layout(location = 1) in vec2 aflowvel; // Flow velocity
 layout(location = 2) in vec2 apos; // Vertex position
