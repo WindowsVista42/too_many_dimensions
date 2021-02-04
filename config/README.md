@@ -1,0 +1,1 @@
+game settings and configuration data (.toml)

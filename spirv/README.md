@@ -1,1 +1,1 @@
-spir-v files
+spir-v files (.spv)  
