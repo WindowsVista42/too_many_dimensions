@@ -1,6 +1,9 @@
 use crate::{flow, view};
 use memoffset::*;
 use pollster::block_on;
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng;
+use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::event::{Event, VirtualKeyCode};
 use winit::window::Window;
@@ -321,22 +324,24 @@ impl State {
         let mut initial_flow_data = vec![
             flow::Particle {
                 pos: glam::Vec2::zero().into(),
-                vel: glam::Vec2::zero().into()
+                vel: glam::Vec2::zero().into(),
             };
-            (4 * flow::MAX_NUM_FLOW) as usize
+            flow::MAX_NUM_FLOW as _
         ];
-        for p in initial_flow_data.iter_mut() {
-            p.pos[0] = 12.0 * (rand::random::<f32>() - 0.5); // posx
-            p.pos[1] = 12.0 * (rand::random::<f32>() - 0.5); // posy
-            p.vel[0] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; // velx
-            p.vel[1] = 2.0 * (rand::random::<f32>() - 0.5) * 0.1; // vely
-            if p.pos[0] == 0.0 {
-                p.pos[0] = 0.01;
-            }
-            if p.pos[1] == 0.0 {
-                p.pos[1] = 0.01;
-            }
-        }
+        initial_flow_data
+            .par_chunks_mut(flow::NUM_FLOW / 32)
+            .enumerate()
+            .for_each(|(i, c)| {
+                let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+                for p in c {
+                    let flow_ext = 1.0;
+                    let flow_max = flow_uniforms.flow_max;
+                    p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+                    p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posy
+                    p.vel[0] = xsrng.gen_range(-flow_max..flow_max); // velx
+                    p.vel[1] = xsrng.gen_range(-flow_max..flow_max); // vely
+                }
+            });
 
         let mut flow_buffers = Vec::<wgpu::Buffer>::with_capacity(2);
         let mut flow_bind_groups = Vec::<wgpu::BindGroup>::with_capacity(2);
@@ -344,7 +349,7 @@ impl State {
             flow_buffers.push(
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some(&format!("FLOW BUFFER {}", i)),
-                    contents: bytemuck::cast_slice(&initial_flow_data.as_slice()),
+                    contents: bytemuck::cast_slice(&*initial_flow_data),
                     usage: wgpu::BufferUsage::VERTEX
                         | wgpu::BufferUsage::STORAGE
                         | wgpu::BufferUsage::COPY_DST,

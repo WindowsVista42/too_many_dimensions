@@ -27,6 +27,7 @@ rayon = "1.5.0"
 shaderc = "0.7.0"
 
 [dependencies]
+rayon = "1.5.0"
 bytemuck = { version = "1.5.0", features = ["derive"] }
 glam = "0.12.0"
 memoffset = { version = "0.6.1", features = ["unstable_const"] }
