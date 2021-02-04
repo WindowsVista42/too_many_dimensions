@@ -6,6 +6,9 @@ layout(location = 0) in vec2 aflowpos; // Flow position
 layout(location = 1) in vec2 aflowvel; // Flow velocity
 layout(location = 2) in vec2 apos; // Vertex position
 
+// Lol what you can just insert these at random
+layout(location = 0) out vec3 v_col;
+
 layout(set = 0, binding = 0)
 uniform Uniforms {
     vec2 u_view_pos; // View position
@@ -20,5 +23,13 @@ void main() {
     ) * 0.5 + 0.3;
     vec2 vpos = test + apos + aflowpos - u_view_pos;
     vpos *= u_view_scl;
+
+    const vec3 col = vec3(
+        pow((sin(angle) + 1.0) * 0.5, 16.0),
+        (sin(angle) + 1.0) * 0.5 + (cos(angle) + 1.0) * 0.7,
+        2.0
+    );
+
+    v_col = col.rgb;
     gl_Position = vec4(vpos, 0.0, 1.0);
 }
