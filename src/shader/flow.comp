@@ -1,9 +1,9 @@
 #version 460
 
-#define MAX_SPAW 400
-#define MAX_MANI 400
-#define MAX_ACCU 400
-#define MAX_FLOW 5000000
+#define MAX_SPAW 1000
+#define MAX_MANI 1000
+#define MAX_ACCU 1000
+#define MAX_FLOW 3000000
 
 #define PI 3.141592653589793238
 
@@ -64,10 +64,13 @@ struct Manipulator {
     float rot;
 };
 
+struct SpawnerCollider {
+    float rte;
+};
+
 struct Spawner {
     vec2  pos;
-    float rad;
-    float rte;
+    float rad2;
     float scl;
     float var;
     float col;
@@ -118,9 +121,9 @@ layout(set = 0, binding = 3) buffer DstParticles {
     Particle dst[MAX_FLOW];
 };
 
-/// Ref Collider and Spawner in flow.rs
+// Ref SpawnerCollider and Spawner in flow.rs
 layout(set = 0, binding = 4) buffer SpawnerColliders {
-    Collider spaw_coll[MAX_SPAW];
+    SpawnerCollider spaw_coll[MAX_SPAW];
 };
 layout(set = 0, binding = 5) buffer Spawners {
     Spawner spaw[MAX_SPAW];
