@@ -57,6 +57,15 @@ pub struct State {
     pub flow_buff_idx: usize,
     pub flow_cap: u32,
     pub flow_count: u32,
+    // Spawners
+    pub spaw_coll_buffer: wgpu::Buffer,
+    pub spawner_buffer: wgpu::Buffer,
+    // Manipulators
+    pub mani_coll_buffer: wgpu::Buffer,
+    pub manipulator_buffer: wgpu::Buffer,
+    // Accumulators
+    pub accu_coll_buffer: wgpu::Buffer,
+    pub accumulator_buffer: wgpu::Buffer,
 
     // BUILD AFTER SELF
     pub multisampled_framebuffer: Option<wgpu::TextureView>,
@@ -97,7 +106,10 @@ impl State {
                 &wgpu::DeviceDescriptor {
                     label: None,
                     features: wgpu::Features::default() | wgpu::Features::MAPPABLE_PRIMARY_BUFFERS,
-                    limits: wgpu::Limits::default(),
+                    limits: wgpu::Limits {
+                        max_storage_buffers_per_shader_stage: 10,
+                        ..Default::default()
+                    },
                 },
                 None,
             )
@@ -193,6 +205,7 @@ impl State {
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: None,
                 entries: &[
+                    // Flow Uniforms
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStage::COMPUTE
@@ -208,6 +221,7 @@ impl State {
                         },
                         count: None,
                     },
+                    // Flow Atomics
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
                         visibility: wgpu::ShaderStage::COMPUTE,
@@ -220,6 +234,7 @@ impl State {
                         },
                         count: None,
                     },
+                    // Flow particle 0
                     wgpu::BindGroupLayoutEntry {
                         binding: 2,
                         visibility: wgpu::ShaderStage::COMPUTE,
@@ -227,12 +242,13 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow_uniforms.ct as usize * std::mem::size_of::<flow::Particle>())
+                                (flow::MAX_NUM_FLOW as usize * std::mem::size_of::<flow::Particle>())
                                     as _,
                             ),
                         },
                         count: None,
                     },
+                    // Flow particle 1
                     wgpu::BindGroupLayoutEntry {
                         binding: 3,
                         visibility: wgpu::ShaderStage::COMPUTE,
@@ -240,8 +256,86 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow_uniforms.ct as usize * std::mem::size_of::<flow::Particle>())
+                                (flow::MAX_NUM_FLOW as usize * std::mem::size_of::<flow::Particle>())
                                     as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Spawner Colliders
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_SPAW as usize * std::mem::size_of::<flow::SpawnerCollider>()) as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Spawners
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_SPAW as usize * std::mem::size_of::<flow::Spawner>()) as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Manipulator Colliders
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 6,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_MANI as usize * std::mem::size_of::<flow::Collider>()) as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Manipulators
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 7,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_MANI as usize * std::mem::size_of::<flow::Manipulator>()) as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Accumulator Colliders
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 8,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_ACCU as usize * std::mem::size_of::<flow::Collider>()) as _,
+                            ),
+                        },
+                        count: None,
+                    },
+                    // Accumulators
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 9,
+                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: wgpu::BufferSize::new(
+                                (flow::MAX_NUM_ACCU as usize * std::mem::size_of::<flow::Accumulator>()) as _,
                             ),
                         },
                         count: None,
@@ -343,9 +437,9 @@ impl State {
             .enumerate()
             .for_each(|(i, c)| {
                 let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+                let flow_ext = 1.0;
+                let flow_max = flow_uniforms.flow_max;
                 for p in c {
-                    let flow_ext = 1.0;
-                    let flow_max = flow_uniforms.flow_max;
                     p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
                     p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posy
                     p.vel[0] = xsrng.gen_range(-flow_max..flow_max); // velx
@@ -367,6 +461,115 @@ impl State {
             );
         }
 
+        let (init_spaw_coll, mut init_mani_coll, mut init_accu_coll) = (
+            // Spawner 'Colliders'
+            vec![flow::SpawnerCollider { rte: 1.0 }; flow::MAX_NUM_SPAW],
+            // Manipulators
+            vec![
+                flow::Collider {
+                    pos: [0.0, 0.0],
+                    rad2: 0.2,
+                };
+                flow::MAX_NUM_SPAW
+            ],
+            // Accumulators
+            vec![
+                flow::Collider {
+                    pos: [0.0, 0.0],
+                    rad2: 0.2,
+                };
+                flow::MAX_NUM_SPAW
+            ],
+        );
+
+        // Spawners
+        let mut init_spawner_data = vec![
+            flow::Spawner {
+                pos: [0.0, 0.0],
+                rad2: 0.0,
+                scl: 0.0,
+                var: 0.0,
+                col: [1.0, 1.0, 1.0],
+            };
+            flow::MAX_NUM_SPAW
+        ];
+        init_spawner_data.iter_mut().enumerate().for_each(|(i, p)| {
+            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+            let flow_ext = flow_uniforms.flow_ext;
+            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+        });
+        let spaw_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("SPAWNER COLLIDER BUFFER"),
+            contents: &bytemuck::cast_slice(init_spaw_coll.as_slice()),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+        let spawner_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("SPAWNER BUFFER"),
+            contents: &bytemuck::cast_slice(init_spawner_data.as_slice()),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+
+        // Manipulators
+        init_mani_coll.iter_mut().enumerate().for_each(|(i, p)| {
+            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+            let flow_ext = flow_uniforms.flow_ext;
+            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+        });
+        let mani_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("MANIPULATOR COLLIDERS BUFFER"),
+            contents: &bytemuck::cast_slice(init_mani_coll.as_slice()),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+        let manipulator_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("MANIPULATOR BUFFER"),
+            contents: &bytemuck::cast_slice(
+                vec![
+                    flow::Manipulator {
+                        acc: 1.0,
+                        spd: 1.0,
+                        rot: 0.0
+                    };
+                    flow::MAX_NUM_MANI
+                ]
+                .as_slice(),
+            ),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+
+        // Accumulators
+        init_accu_coll.iter_mut().enumerate().for_each(|(i, p)| {
+            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+            let flow_ext = flow_uniforms.flow_ext;
+            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+        });
+        let accu_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ACCUMULATOR COLLIDERS"),
+            contents: &bytemuck::cast_slice(init_accu_coll.as_slice()),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+        let accumulator_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("ACCUMULATOR BUFFER"),
+            contents: &bytemuck::cast_slice(
+                vec![flow::Accumulator { rte: 1.0 }; flow::MAX_NUM_ACCU].as_slice(),
+            ),
+            usage: wgpu::BufferUsage::VERTEX
+                | wgpu::BufferUsage::STORAGE
+                | wgpu::BufferUsage::COPY_DST,
+        });
+
         for i in 0..2 {
             flow_bind_groups.push(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some(&format!("FLOW BIND GROUP {}", i)),
@@ -387,6 +590,30 @@ impl State {
                     wgpu::BindGroupEntry {
                         binding: 3,
                         resource: flow_buffers[(i + 1) % 2].as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: spaw_coll_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: spawner_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 6,
+                        resource: mani_coll_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 7,
+                        resource: manipulator_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 8,
+                        resource: accu_coll_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 9,
+                        resource: accumulator_buffer.as_entire_binding(),
                     },
                 ],
             }));
@@ -441,6 +668,13 @@ impl State {
             flow_work_group_count,
             flow_cap: flow::MAX_NUM_FLOW as u32,
             flow_count: flow_uniforms.ct as u32,
+
+            spaw_coll_buffer,
+            spawner_buffer,
+            mani_coll_buffer,
+            manipulator_buffer,
+            accu_coll_buffer,
+            accumulator_buffer,
 
             multisampled_framebuffer: None,
 
