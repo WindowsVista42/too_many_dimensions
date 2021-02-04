@@ -27,13 +27,16 @@ rayon = "1.5.0"
 shaderc = "0.7.0"
 
 [dependencies]
-rayon = "1.5.0"
 bytemuck = { version = "1.5.0", features = ["derive"] }
+chrono = "0.4.19"
+flexi_logger = { version = "0.17.1", features = ["compress"] }
 glam = "0.12.0"
+log = "0.4.4"
 memoffset = { version = "0.6.1", features = ["unstable_const"] }
 pollster = "0.2.1"
 rand = "0.8.1"
 rand_xorshift = "0.3.0"
+rayon = "1.5.0"
 wgpu = { version = "0.7.0" }
 winit = "0.24.0"
 winit_input_helper = "0.9.0"
