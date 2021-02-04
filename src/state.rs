@@ -438,7 +438,7 @@ impl State {
 
             flow_work_group_count,
             flow_cap: flow::MAX_NUM_FLOW as u32,
-            flow_count: flow::NUM_FLOW as u32,
+            flow_count: flow_uniforms.ct as u32,
 
             multisampled_framebuffer: None,
 
