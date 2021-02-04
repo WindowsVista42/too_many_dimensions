@@ -37,6 +37,9 @@ pollster = "0.2.1"
 rand = "0.8.1"
 rand_xorshift = "0.3.0"
 rayon = "1.5.0"
+serde = { version = "1.0.123", features = ["derive"] }
+serde_cbor = "0.11.1"
+toml = "0.5.8"
 wgpu = { version = "0.7.0" }
 winit = "0.24.0"
 winit_input_helper = "0.9.0"

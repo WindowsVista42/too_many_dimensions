@@ -1,8 +1,8 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
-macro_rules! debug_info {
+macro_rules! dinfo {
     ($($arg:tt)*) => {
-        log!(log::Level::Info, "{}, {}:{}:{}", format!($($arg)*), file!(), line!(), column!());
+        log!(log::Level::Info, "{}\nLOCATION : {}:{}:{}\n", format!($($arg)*), file!(), line!(), column!());
     };
 }
 
@@ -14,14 +14,29 @@ mod state;
 mod view;
 
 use pollster::block_on;
+use serde::{Deserialize, Serialize};
 use state::*;
+use std::fs;
+use std::io::Read;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowBuilder};
 
+#[derive(Debug, Serialize, Deserialize)]
+// TODO: Add pretty printing
+pub struct GlobalConfig {
+    window: WindowConfig,
+    flow: flow::Config,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct WindowConfig {
+    msaa: u32,
+}
+
 /// Toggle windows fullscreen setting when called
 fn toggle_fullscreen(state: &mut State, window: &Window) {
-    debug_info!("Fullscreen Toggled");
+    dinfo!("Fullscreen Toggled");
     if state.fullscreen {
         window.set_fullscreen(None);
         state.fullscreen = false;
@@ -49,31 +64,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .create_symlink("current_run")
     .start()?;
 
-    debug!("{}", chrono::Local::now().format("%Y-%m-%d_%H-%M-%S"));
-    debug_info!("Program Start (0s)");
+    debug!(
+        "Logger Started: {}\n",
+        chrono::Local::now().format("%Y-%m-%d_%H-%M-%S")
+    );
+
+    dinfo!("Program Start ({} ms)", p_st.elapsed().as_millis());
+
+    dinfo!("Config Start");
+    let now = std::time::Instant::now();
+    let mut conf_str = String::new();
+    fs::File::open("config/config.toml")?.read_to_string(&mut conf_str)?;
+    let global_config: GlobalConfig = toml::from_str(conf_str.as_str())?;
+    dinfo!("Config End ({} ms)", now.elapsed().as_millis());
 
     let mut exited = false;
-
     let event_loop = EventLoop::new();
-    debug_info!("Event Loop Created");
+    dinfo!("Event Loop Created");
 
     let window = WindowBuilder::new()
         .with_title("Too Many Dimensions")
         .build(&event_loop)
         .unwrap();
-    debug_info!("Window Created");
+    dinfo!("Window Created");
 
     let now = std::time::Instant::now();
-    debug_info!("State Start");
-    let mut state = block_on(State::new(&window, 8));
-    debug_info!("State End ({} ms)", now.elapsed().as_millis());
+    dinfo!("State Start");
+    let mut state = block_on(State::new(&window, &global_config));
+    dinfo!("State End ({} ms)", now.elapsed().as_millis());
 
     event_loop.run(move |event, _, control_flow| {
         state.update(&event);
         if state.quit {
             *control_flow = ControlFlow::Exit;
             if !exited {
-                debug_info!("Program Close ({} s)", p_st.elapsed().as_secs());
+                dinfo!("Program Close ({} s)", p_st.elapsed().as_secs());
                 exited = true;
             }
             return;
@@ -113,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 event: WindowEvent::Resized(physical_size),
                 ..
             } => {
-                debug_info!("Window Resized");
+                dinfo!("Window Resized");
                 state.resize(physical_size);
             }
             Event::MainEventsCleared => {

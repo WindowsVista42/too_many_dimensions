@@ -1,4 +1,4 @@
-use crate::{flow, view};
+use crate::{flow, view, GlobalConfig};
 use memoffset::*;
 use pollster::block_on;
 use rand::{Rng, SeedableRng};
@@ -68,8 +68,11 @@ pub struct State {
 }
 
 impl State {
-    pub async fn new(window: &Window, sample_count: u32) -> Self {
+    pub async fn new(window: &Window, global_config: &GlobalConfig) -> Self {
         let now = std::time::Instant::now();
+        // CONFIG
+        let sample_count = global_config.window.msaa;
+
         // INPUT
         let input = WinitInputHelper::new();
 
@@ -77,7 +80,7 @@ impl State {
         let fullscreen = window.fullscreen().is_some();
 
         // INSTANCE
-        debug_info!("Instance ({} ms)", now.elapsed().as_millis());
+        dinfo!("Instance ({} ms)", now.elapsed().as_millis());
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
         let surface = unsafe { instance.create_surface(window) };
@@ -112,7 +115,7 @@ impl State {
         let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         // SHADER LOADING
-        debug_info!("Shader Loading ({} ms)", now.elapsed().as_millis());
+        dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
         let flow_cs_module =
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
         let flow_vs_module =
@@ -121,7 +124,7 @@ impl State {
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
 
         // UNIFORMS
-        debug_info!("View Uniforms ({} ms)", now.elapsed().as_millis());
+        dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
         let camera = view::Camera {
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
@@ -166,8 +169,8 @@ impl State {
         });
 
         // FLOW
-        debug_info!("Flow ({} ms)", now.elapsed().as_millis());
-        let flow_uniforms = flow::CONFIG.uniforms;
+        dinfo!("Flow ({} ms)", now.elapsed().as_millis());
+        let flow_uniforms = flow::Uniforms::from(global_config.flow.clone());
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
             contents: bytemuck::cast_slice(&[flow_uniforms]),
@@ -325,7 +328,7 @@ impl State {
             usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::COPY_DST,
         });
 
-        debug_info!("Initial Flow Data ({} ms)", now.elapsed().as_millis());
+        dinfo!("Initial Flow Data ({} ms)", now.elapsed().as_millis());
         let mut initial_flow_data = vec![
             flow::Particle {
                 pos: glam::Vec2::zero().into(),
@@ -387,7 +390,7 @@ impl State {
             }));
         }
 
-        let flow_work_group_count = ((flow::NUM_FLOW as f32) / (64.0)).ceil() as u32;
+        let flow_work_group_count = ((flow_uniforms.ct as f32) / (64.0)).ceil() as u32;
 
         let flow_num_indices = 8;
 
@@ -445,7 +448,7 @@ impl State {
             active: Some(0),
         };
 
-        debug_info!(
+        dinfo!(
             "Multisampled Framebuffer ({} ms)",
             now.elapsed().as_millis()
         );
@@ -536,7 +539,6 @@ impl State {
             });
 
         if !self.pause {
-            //self.change_flow_count();
             self.flow_buff_idx ^= 1;
             self.flow_work_group_count = ((self.flow_count as f32) / (64.0)).ceil() as u32;
 
