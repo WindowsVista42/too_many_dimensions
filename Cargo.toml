@@ -4,8 +4,20 @@ version = "0.1.0"
 authors = ["Sean Moulton <bananamoulton@gmail.com>"]
 edition = "2018"
 
+[profile.dev]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 128
+rpath = false
+
 [profile.release]
-# lto = true
+lto = true
+panic = 'abort'
 
 [build-dependencies]
 anyhow = "1.0.38"
