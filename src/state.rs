@@ -227,7 +227,8 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
+                                (flow_uniforms.ct as usize * std::mem::size_of::<flow::Particle>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -239,7 +240,8 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::NUM_FLOW * std::mem::size_of::<flow::Particle>()) as _,
+                                (flow_uniforms.ct as usize * std::mem::size_of::<flow::Particle>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -337,7 +339,7 @@ impl State {
             flow::MAX_NUM_FLOW as _
         ];
         initial_flow_data
-            .par_chunks_mut(flow::NUM_FLOW / 32)
+            .par_chunks_mut((flow_uniforms.ct / 32) as usize)
             .enumerate()
             .for_each(|(i, c)| {
                 let mut xsrng = XorShiftRng::seed_from_u64(i as _);

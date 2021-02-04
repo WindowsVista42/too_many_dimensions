@@ -15,8 +15,7 @@ pub const FLOW_SHAPE_INDICES: [u16; 6] = [
     0, 2, 3,
 ];
 
-pub const MAX_NUM_FLOW: usize = 1_000_000;
-pub const NUM_FLOW: usize = 1_000_000;
+pub const MAX_NUM_FLOW: usize = 15_000_000;
 
 #[rustfmt::skip]
 #[derive(Clone, Debug, Serialize, Deserialize)]
