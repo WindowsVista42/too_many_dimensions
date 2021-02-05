@@ -161,6 +161,7 @@ layout(binding = 9) buffer Accumulators {
 // Increment atomic counter
 void main() {
     uint sflag = 0;
+    // TODO: Finish this
     for(uint i = 0; i < spaw_ct; i++) {
         if(rand(i * 100) > spaw_coll[i].rte) {
             sflag = i;
