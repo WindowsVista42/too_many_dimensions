@@ -26,7 +26,7 @@ use winit::window::{Window, WindowBuilder};
 // TODO: Add pretty printing
 pub struct GlobalConfig {
     window: WindowConfig,
-    flow: flow::Config,
+    flow: flow::Uniforms,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]

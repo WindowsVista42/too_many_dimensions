@@ -21,144 +21,107 @@ pub const MAX_NUM_SPAW: usize = 1_000;
 pub const MAX_NUM_MANI: usize = 1_000;
 pub const MAX_NUM_ACCU: usize = 1_000;
 
-#[rustfmt::skip]
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Config {
-    initial_count:              u32,
-
-    flow_extent:                f32,
-    flow_acceleration:          f32,
-    flow_max_speed:             f32,
-    flow_scale:                 f32,
-    flow_jitter:                f32,
-    flow_offset:               [f32; 2],
-    
-    collider_scale:             f32,
-    
-    initial_manipulator_count:  u32,
-    manipulator_acceleration:   f32,
-    manipulator_speed_factor:   f32,
-    
-    initial_spawner_count:      u32,
-    spawner_spawn_rate:         f32,
-    spawner_scale:              f32,
-    spawner_variance:           f32,
-    spawner_color:             [f32; 3],
-    
-    initial_accumulator_count:  u32,
-    accumulator_rate:           f32,
-    accumulator_scale:          f32,
-}
-impl From<Uniforms> for Config {
-    fn from(uniforms: Uniforms) -> Self {
-        Self {
-            initial_count: uniforms.ct,
-            flow_extent: uniforms.flow_ext,
-            flow_acceleration: uniforms.flow_acc,
-            flow_max_speed: uniforms.flow_max,
-            flow_scale: uniforms.flow_scl,
-            flow_jitter: uniforms.flow_jit,
-            flow_offset: uniforms.flow_off,
-            collider_scale: uniforms.coll_scl,
-            initial_manipulator_count: uniforms.mani_ct,
-            manipulator_acceleration: uniforms.mani_acc,
-            manipulator_speed_factor: uniforms.mani_spd,
-            initial_spawner_count: uniforms.spaw_ct,
-            spawner_spawn_rate: uniforms.spaw_rte,
-            spawner_scale: uniforms.spaw_scl,
-            spawner_variance: uniforms.spaw_var,
-            spawner_color: uniforms.spaw_col,
-            initial_accumulator_count: uniforms.accu_ct,
-            accumulator_rate: uniforms.accu_rte,
-            accumulator_scale: uniforms.accu_scl,
-        }
-    }
+fn zero_f32() -> f32 {
+    0.0f32
 }
 
 #[repr(C)]
 #[rustfmt::skip]
-#[derive(Copy, Clone, Debug, Pod, Zeroable)]
+#[derive(Copy, Clone, Debug, Pod, Zeroable, Serialize, Deserialize)]
+#[serde(rename = "flow")]
 /// Sim info
 // Will probably have to add more in the future
 pub struct Uniforms {
+    #[serde(default = "zero_f32", skip)]
     /// Simulation delta time
     pub dt:         f32,
+
+    #[serde(rename = "flow_initial_count")]
     /// Global particle count
     pub ct:         u32,
     // Transparency gets decided based on count //
 
-    // Global Flow Field Settings
-    /// Max/Min xy before wrapping
-    pub flow_ext:   f32,
+    /*  Global Flow Field Settings
+    */
+    #[serde(rename = "flow_particle_acceleration")]
     /// Global acceleration factor
     pub flow_acc:   f32,
-    /// Global max speed
-    pub flow_max:   f32,
-    /// Global flow field scale
-    pub flow_scl:   f32,
+
+    #[serde(rename = "flow_particle_jitter")]
     /// Global flow jitter scale
     pub flow_jit:   f32,
+
+    #[serde(rename = "flow_particle_max_speed")]
+    /// Global max speed
+    pub flow_max:   f32,
+
+    #[serde(rename = "flow_field_extent")]
+    /// Max/Min xy before wrapping
+    pub flow_ext:   f32,
+
+    #[serde(rename = "flow_field_scale")]
+    /// Global flow field scale
+    pub flow_scl:   f32,
+
+    #[serde(rename = "flow_field_offset")]
     /// Global flow field offset
     pub flow_off:  [f32; 2],
 
-    // Global Collider Settings
+    /*  Global Collider Settings
+    */
+    #[serde(rename = "collider_scale")]
     /// Global size factor
     pub coll_scl:   f32,
 
-    // Global Manipulator Settings
+    /*  Global Manipulator Settings
+    */
+    #[serde(rename = "manipulator_initial_count")]
     /// Manipulator count
     pub mani_ct:    u32,
+
+    #[serde(rename = "manipulator_acceleration")]
     /// Global inner acceleration factor
     pub mani_acc:   f32,
+
+    #[serde(rename = "manipulator_max_speed")]
     /// Global inner speed factor
     pub mani_spd:   f32,
 
-    // Global Spawner Settings
+    /*  Global Spawner Settings
+    */
+    #[serde(rename = "spawner_initial_count")]
     /// Spawner count
     pub spaw_ct:    u32,
+
+    #[serde(rename = "spawner_spawn_rate")]
     /// Global spawn rate factor
     pub spaw_rte:   f32,
+
+    #[serde(rename = "spawner_scale")]
     /// Global radius factor
     pub spaw_scl:   f32,
+
+    #[serde(rename = "spawner_particle_scale_variance")]
     /// Global scale variance factor
     pub spaw_var:   f32,
+
+    #[serde(rename = "spawner_particle_default_color")]
     /// Global default spawn color
     pub spaw_col:  [f32; 3],
 
-    // Global Accumulator Settings
+    /*  Global Accumulator Settings
+    */
+    #[serde(rename = "accumulator_initial_count")]
     /// Accumulator count
     pub accu_ct:    u32,
+
+    #[serde(rename = "accumulator_resource_rate_factor")]
     /// Global resource rate factor
     pub accu_rte:   f32,
+
+    #[serde(rename = "accumulator_scale")]
     /// Global scale factor
     pub accu_scl:   f32,
-    //TODO: Add missing fields
-}
-impl From<Config> for Uniforms {
-    fn from(config: Config) -> Self {
-        Self {
-            dt: 0.0,
-            ct: config.initial_count,
-            flow_ext: config.flow_extent,
-            flow_acc: config.flow_acceleration,
-            flow_max: config.flow_max_speed,
-            flow_scl: config.flow_scale,
-            flow_jit: config.flow_jitter,
-            flow_off: config.flow_offset,
-            coll_scl: config.collider_scale,
-            mani_ct: config.initial_manipulator_count,
-            mani_acc: config.manipulator_acceleration,
-            mani_spd: config.manipulator_speed_factor,
-            spaw_ct: config.initial_spawner_count,
-            spaw_rte: config.spawner_spawn_rate,
-            spaw_scl: config.spawner_scale,
-            spaw_var: config.spawner_variance,
-            spaw_col: config.spawner_color,
-            accu_ct: config.initial_accumulator_count,
-            accu_rte: config.accumulator_rate,
-            accu_scl: config.accumulator_scale,
-        }
-    }
 }
 
 #[repr(C)]

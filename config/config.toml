@@ -1,25 +1,26 @@
 [flow]
-initial_count = 100000
-flow_extent = 12.0
-flow_acceleration = 2.5
-flow_max_speed = 0.9
-flow_scale = 0.3
-flow_jitter = 4.0
-flow_offset = [123.0, 934.0]
-collider_scale = 0.0
+flow_initial_count = 100000
+flow_particle_acceleration = 2.5
+flow_particle_jitter = 1.0
+flow_particle_max_speed = 0.9
+flow_field_extent = 12.0
+flow_field_scale = 0.3
+flow_field_offset = [123.0, 934.0]
 
-initial_manipulator_count = 10
-manipulator_acceleration = 1.5
-manipulator_speed_factor = 1.0
+collider_scale = 1.0
 
-initial_spawner_count = 10
+spawner_initial_count = 10
 spawner_spawn_rate = 1.0
 spawner_scale = 1.0
-spawner_variance = 1.0
-spawner_color = [1.0, 1.0, 1.0]
+spawner_particle_scale_variance = 1.0
+spawner_particle_default_color = [1.0, 1.0, 1.0]
 
-initial_accumulator_count = 10
-accumulator_rate = 1.0
+manipulator_initial_count = 10
+manipulator_acceleration = 1.5
+manipulator_max_speed = 1.0
+
+accumulator_initial_count = 10
+accumulator_resource_rate_factor = 1.0
 accumulator_scale = 1.0
 
 [window]

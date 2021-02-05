@@ -182,7 +182,7 @@ impl State {
 
         // FLOW
         dinfo!("Flow ({} ms)", now.elapsed().as_millis());
-        let flow_uniforms = flow::Uniforms::from(global_config.flow.clone());
+        let flow_uniforms = global_config.flow;
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
             contents: bytemuck::cast_slice(&[flow_uniforms]),
@@ -437,7 +437,7 @@ impl State {
             .enumerate()
             .for_each(|(i, c)| {
                 let mut xsrng = XorShiftRng::seed_from_u64(i as _);
-                let flow_ext = 1.0;
+                let flow_ext = flow_uniforms.flow_ext;
                 let flow_max = flow_uniforms.flow_max;
                 for p in c {
                     p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
@@ -470,7 +470,7 @@ impl State {
                     pos: [0.0, 0.0],
                     rad2: 0.2,
                 };
-                flow::MAX_NUM_SPAW
+                flow::MAX_NUM_MANI
             ],
             // Accumulators
             vec![
@@ -478,7 +478,7 @@ impl State {
                     pos: [0.0, 0.0],
                     rad2: 0.2,
                 };
-                flow::MAX_NUM_SPAW
+                flow::MAX_NUM_ACCU
             ],
         );
 

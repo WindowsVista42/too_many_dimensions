@@ -87,11 +87,12 @@ layout(set = 0, binding = 0) uniform Uniforms {
     float dt;
     uint  ct;
 
-    float flow_ext;
     float flow_acc;
-    float flow_max;
-    float flow_scl;
     float flow_jit;
+    float flow_max;
+
+    float flow_ext;
+    float flow_scl;
     vec2  flow_off;
 
     float coll_scl;
@@ -153,11 +154,13 @@ layout(set = 0, binding = 9) buffer Accumulators {
 // Move our particle
 // Increment atomic counter
 void main() {
+    /*
     for(uint i = 0; i < spaw_ct; i++) {
         // IF SOME CONDITION
             // SPAWN A PARTICLE
             // INCREMENT ATOMIC COUNTER
     }
+    */
 
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= ct) return;
@@ -175,7 +178,7 @@ void main() {
 
         // Early return, effectively deleting the particle
         // TODO: Count this towards some objective, likely a uniform
-        if(prod2 < coll_rad2) { return; }
+        //if(prod2 < coll_rad2) { return; }
     }
 
     // Flow field movement
