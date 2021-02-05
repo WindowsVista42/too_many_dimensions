@@ -427,8 +427,8 @@ impl State {
         dinfo!("Initial Flow Data ({} ms)", now.elapsed().as_millis());
         let mut initial_flow_data = vec![
             flow::Particle {
-                pos: glam::Vec2::zero().into(),
-                vel: glam::Vec2::zero().into(),
+                pos: [0.0, 0.0],
+                vel: [0.0, 0.0],
             };
             flow::MAX_NUM_FLOW as _
         ];
@@ -447,19 +447,6 @@ impl State {
                 }
             });
 
-        let mut flow_buffers = Vec::<wgpu::Buffer>::with_capacity(2);
-        let mut flow_bind_groups = Vec::<wgpu::BindGroup>::with_capacity(2);
-        for i in 0..2 {
-            flow_buffers.push(
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some(&format!("FLOW BUFFER {}", i)),
-                    contents: bytemuck::cast_slice(&*initial_flow_data),
-                    usage: wgpu::BufferUsage::VERTEX
-                        | wgpu::BufferUsage::STORAGE
-                        | wgpu::BufferUsage::COPY_DST,
-                }),
-            );
-        }
 
         let (init_spaw_coll, mut init_mani_coll, mut init_accu_coll) = (
             // Spawner 'Colliders'
@@ -467,48 +454,54 @@ impl State {
             // Manipulators
             vec![
                 flow::Collider {
-                    pos: [0.0, 0.0],
-                    rad2: 0.2,
+                    x: 0.0,
+                    y: 0.0,
+                    r2: 2.0
                 };
                 flow::MAX_NUM_MANI
             ],
             // Accumulators
             vec![
                 flow::Collider {
-                    pos: [0.0, 0.0],
-                    rad2: 0.2,
+                    x: 0.0,
+                    y: 0.0,
+                    r2: 4.0,
                 };
                 flow::MAX_NUM_ACCU
             ],
         );
 
+        let rand_num: u64 = rand::prelude::thread_rng().gen();
+
         // Spawners
         let mut init_spawner_data = vec![
             flow::Spawner {
-                pos: [0.0, 0.0],
-                rad2: 0.0,
+                x: 0.0,
+                y: 0.0,
                 scl: 0.0,
                 var: 0.0,
-                col: [1.0, 1.0, 1.0],
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
             };
             flow::MAX_NUM_SPAW
         ];
         init_spawner_data.iter_mut().enumerate().for_each(|(i, p)| {
-            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+            let mut xsrng = XorShiftRng::seed_from_u64(i as u64 + rand_num);
             let flow_ext = flow_uniforms.flow_ext;
-            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
-            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.x = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.y = xsrng.gen_range(-flow_ext..flow_ext); // posx
         });
         let spaw_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("SPAWNER COLLIDER BUFFER"),
-            contents: &bytemuck::cast_slice(init_spaw_coll.as_slice()),
+            contents: &bytemuck::cast_slice(&*init_spaw_coll),
             usage: wgpu::BufferUsage::VERTEX
                 | wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
         });
         let spawner_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("SPAWNER BUFFER"),
-            contents: &bytemuck::cast_slice(init_spawner_data.as_slice()),
+            contents: &bytemuck::cast_slice(&*init_spawner_data),
             usage: wgpu::BufferUsage::VERTEX
                 | wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
@@ -516,14 +509,14 @@ impl State {
 
         // Manipulators
         init_mani_coll.iter_mut().enumerate().for_each(|(i, p)| {
-            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
+            let mut xsrng = XorShiftRng::seed_from_u64(i as u64 + rand_num);
             let flow_ext = flow_uniforms.flow_ext;
-            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
-            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.x = xsrng.gen_range(-flow_ext..flow_ext); // posx
+            p.y = xsrng.gen_range(-flow_ext..flow_ext); // posx
         });
         let mani_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("MANIPULATOR COLLIDERS BUFFER"),
-            contents: &bytemuck::cast_slice(init_mani_coll.as_slice()),
+            contents: &bytemuck::cast_slice(&*init_mani_coll),
             usage: wgpu::BufferUsage::VERTEX
                 | wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
@@ -547,28 +540,43 @@ impl State {
         });
 
         // Accumulators
-        init_accu_coll.iter_mut().enumerate().for_each(|(i, p)| {
-            let mut xsrng = XorShiftRng::seed_from_u64(i as _);
-            let flow_ext = flow_uniforms.flow_ext;
-            p.pos[0] = xsrng.gen_range(-flow_ext..flow_ext); // posx
-            p.pos[1] = xsrng.gen_range(-flow_ext..flow_ext); // posx
+        // WHAT THE ACTUAL FUCK IS THIS DOING
+        let mut xsrng = XorShiftRng::seed_from_u64(rand_num);
+        //let mut xsrng = rand::prelude::thread_rng();
+        init_accu_coll.iter_mut().for_each(|p| {
+            let flow_ext = flow_uniforms.flow_ext - 2.0;
+            p.x = xsrng.gen_range((-flow_ext)..(flow_ext)); // posx
+            p.y = xsrng.gen_range((-flow_ext)..(flow_ext)); // posy
         });
         let accu_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("ACCUMULATOR COLLIDERS"),
             contents: &bytemuck::cast_slice(init_accu_coll.as_slice()),
-            usage: wgpu::BufferUsage::VERTEX
-                | wgpu::BufferUsage::STORAGE
+            usage: wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
         });
         let accumulator_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("ACCUMULATOR BUFFER"),
             contents: &bytemuck::cast_slice(
-                vec![flow::Accumulator { rte: 1.0 }; flow::MAX_NUM_ACCU].as_slice(),
+                &*vec![flow::Accumulator { rte: 1.0 }; flow::MAX_NUM_ACCU],
             ),
             usage: wgpu::BufferUsage::VERTEX
                 | wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
         });
+
+        let mut flow_buffers = Vec::<wgpu::Buffer>::with_capacity(2);
+        let mut flow_bind_groups = Vec::<wgpu::BindGroup>::with_capacity(2);
+        for i in 0..2 {
+            flow_buffers.push(
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some(&format!("FLOW BUFFER {}", i)),
+                    contents: bytemuck::cast_slice(&*initial_flow_data),
+                    usage: wgpu::BufferUsage::VERTEX
+                        | wgpu::BufferUsage::STORAGE
+                        | wgpu::BufferUsage::COPY_DST,
+                }),
+            );
+        }
 
         for i in 0..2 {
             flow_bind_groups.push(device.create_bind_group(&wgpu::BindGroupDescriptor {

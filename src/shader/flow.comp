@@ -1,10 +1,10 @@
 #version 460
 
 // flow.rs
-#define MAX_SPAW 1000
-#define MAX_MANI 1000
-#define MAX_ACCU 1000
-#define MAX_FLOW 3000000
+#define MAX_SPAW 200
+#define MAX_MANI 200
+#define MAX_ACCU 200
+#define MAX_FLOW 1000000
 
 #define PI 3.141592653589793238
 
@@ -56,8 +56,9 @@ struct Particle {
 };
 
 struct Collider {
-    vec2  pos;
-    float rad2;
+    float x;
+    float y;
+    float r2;
 };
 
 struct Manipulator {
@@ -71,11 +72,15 @@ struct SpawnerCollider {
 };
 
 struct Spawner {
-    vec2  pos;
-    float rad2;
+    float x;
+    float y;
+
     float scl;
     float var;
-    float col;
+
+    float r;
+    float g;
+    float b;
 };
 
 struct Accumulator {
@@ -83,7 +88,7 @@ struct Accumulator {
 };
 
 // Ref Uniforms in flow.rs
-layout(set = 0, binding = 0) uniform Uniforms {
+layout(std140, set = 0, binding = 0) uniform Uniforms {
     float dt;
     uint  ct;
 
@@ -93,7 +98,6 @@ layout(set = 0, binding = 0) uniform Uniforms {
 
     float flow_ext;
     float flow_scl;
-    vec2  flow_off;
 
     float coll_scl;
 
@@ -105,11 +109,13 @@ layout(set = 0, binding = 0) uniform Uniforms {
     float spaw_rte;
     float spaw_scl;
     float spaw_var;
-    vec3  spaw_col;
 
     uint  accu_ct;
     float accu_rte;
     float accu_scl;
+
+    vec2  flow_off;
+    vec3  spaw_col;
 };
 /// Ref Atomics in flow.rs
 layout(set = 0, binding = 1) buffer Atomics {
@@ -125,27 +131,27 @@ layout(set = 0, binding = 3) buffer DstParticles {
 };
 
 // Ref SpawnerCollider and Spawner in flow.rs
-layout(set = 0, binding = 4) buffer SpawnerColliders {
+layout(binding = 4) buffer SpawnerColliders {
     SpawnerCollider spaw_coll[MAX_SPAW];
 };
-layout(set = 0, binding = 5) buffer Spawners {
+layout(binding = 5) buffer Spawners {
     Spawner spaw[MAX_SPAW];
 };
 
 /// Ref Collider and Manipulator in flow.rs
-layout(set = 0, binding = 6) buffer ManipulatorColliders {
-    Collider mani_coll[MAX_SPAW];
+layout(binding = 6) buffer ManipulatorColliders {
+    Collider mani_coll[MAX_MANI];
 };
-layout(set = 0, binding = 7) buffer Manipulators {
-    Manipulator mani[MAX_SPAW];
+layout(binding = 7) buffer Manipulators {
+    Manipulator mani[MAX_MANI];
 };
 
 /// Ref Collider and Accumulator in flow.rs
-layout(set = 0, binding = 8) buffer AccumulatorColliders {
-    Collider accu_coll[MAX_SPAW];
+layout(binding = 8) buffer AccumulatorColliders {
+    Collider accu_coll[MAX_ACCU];
 };
-layout(set = 0, binding = 9) buffer Accumulators {
-    Accumulator accu[MAX_SPAW];
+layout(binding = 9) buffer Accumulators {
+    Accumulator accu[MAX_ACCU];
 };
 
 // Check if we need to create a particle
@@ -154,13 +160,16 @@ layout(set = 0, binding = 9) buffer Accumulators {
 // Move our particle
 // Increment atomic counter
 void main() {
-    /*
+    uint sflag = 0;
     for(uint i = 0; i < spaw_ct; i++) {
+        if(rand(i * 100) > spaw_coll[i].rte) {
+            sflag = i;
+            break;
+        }
         // IF SOME CONDITION
-            // SPAWN A PARTICLE
-            // INCREMENT ATOMIC COUNTER
+        // SPAWN A PARTICLE
+        // INCREMENT ATOMIC COUNTER
     }
-    */
 
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= ct) return;
@@ -169,16 +178,38 @@ void main() {
     vec2 vvel = src[idx].vel;
 
     // COLLIDER -> vec2 & float -> pos & rad2
+    uint flag = 0;
     for (uint i = 0; i < accu_ct; i++) {
-        const vec2  coll_pos = accu_coll[i].pos;
-        const float coll_rad2 = accu_coll[i].rad2;
+        const vec2  coll_pos = vec2(accu_coll[i].x, accu_coll[i].y);
+        const float coll_rad2 = accu_coll[i].r2;
 
-        const vec2  prod = (coll_pos.xy - vpos.xy);
-        const float prod2 = (prod.x * prod.x) + (prod.y * prod.y);
+        const float prod2 =
+          ((coll_pos.x - vpos.x) * (coll_pos.x - vpos.x))
+        + ((coll_pos.y - vpos.y) * (coll_pos.y - vpos.y));
 
         // Early return, effectively deleting the particle
-        // TODO: Count this towards some objective, likely a uniform
-        //if(prod2 < coll_rad2) { return; }
+        // TODO: Count this towards some objective, likely in a uniform
+        if(prod2 < coll_rad2) {
+            if(prod2 < coll_rad2 * 0.0625) { return; }
+            const vec2 force_dir = -vec2(vpos.x - coll_pos.x, vpos.y - coll_pos.y);
+
+            vvel += force_dir * dt;
+            vpos += vvel * dt;
+
+            // Really shitty speed capping, but it looks cool
+            if      (vvel.x >  flow_max) vvel.x =  flow_max;
+            else if (vvel.x < -flow_max) vvel.x = -flow_max;
+            if      (vvel.y >  flow_max) vvel.y =  flow_max;
+            else if (vvel.y < -flow_max) vvel.y = -flow_max;
+
+            flag = 1;
+        }
+    }
+    if(flag == 1) {
+        idx = atomicAdd(atom_ct, 1);
+        dst[idx].pos = vpos;
+        dst[idx].vel = vvel;
+        return;
     }
 
     // Flow field movement
@@ -201,7 +232,6 @@ void main() {
     if (vpos.x >  flow_ext) vpos.x = -flow_ext;
     if (vpos.y < -flow_ext) vpos.y =  flow_ext;
     if (vpos.y >  flow_ext) vpos.y = -flow_ext;
-
 
     idx = atomicAdd(atom_ct, 1);
     dst[idx].pos = vpos;

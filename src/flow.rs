@@ -17,9 +17,9 @@ pub const FLOW_SHAPE_INDICES: [u16; 6] = [
 
 // flow.comp
 pub const MAX_NUM_FLOW: usize = 3_000_000;
-pub const MAX_NUM_SPAW: usize = 1_000;
-pub const MAX_NUM_MANI: usize = 1_000;
-pub const MAX_NUM_ACCU: usize = 1_000;
+pub const MAX_NUM_SPAW: usize = 200;
+pub const MAX_NUM_MANI: usize = 200;
+pub const MAX_NUM_ACCU: usize = 200;
 
 fn zero_f32() -> f32 {
     0.0f32
@@ -41,8 +41,8 @@ pub struct Uniforms {
     pub ct:         u32,
     // Transparency gets decided based on count //
 
-    /*  Global Flow Field Settings
-    */
+/*  Global Flow Field Settings
+*/
     #[serde(rename = "flow_particle_acceleration")]
     /// Global acceleration factor
     pub flow_acc:   f32,
@@ -63,18 +63,14 @@ pub struct Uniforms {
     /// Global flow field scale
     pub flow_scl:   f32,
 
-    #[serde(rename = "flow_field_offset")]
-    /// Global flow field offset
-    pub flow_off:  [f32; 2],
-
-    /*  Global Collider Settings
-    */
+/*  Global Collider Settings
+*/
     #[serde(rename = "collider_scale")]
     /// Global size factor
     pub coll_scl:   f32,
 
-    /*  Global Manipulator Settings
-    */
+/*  Global Manipulator Settings
+*/
     #[serde(rename = "manipulator_initial_count")]
     /// Manipulator count
     pub mani_ct:    u32,
@@ -87,8 +83,8 @@ pub struct Uniforms {
     /// Global inner speed factor
     pub mani_spd:   f32,
 
-    /*  Global Spawner Settings
-    */
+/*  Global Spawner Settings
+*/
     #[serde(rename = "spawner_initial_count")]
     /// Spawner count
     pub spaw_ct:    u32,
@@ -105,12 +101,8 @@ pub struct Uniforms {
     /// Global scale variance factor
     pub spaw_var:   f32,
 
-    #[serde(rename = "spawner_particle_default_color")]
-    /// Global default spawn color
-    pub spaw_col:  [f32; 3],
-
-    /*  Global Accumulator Settings
-    */
+/*  Global Accumulator Settings
+*/
     #[serde(rename = "accumulator_initial_count")]
     /// Accumulator count
     pub accu_ct:    u32,
@@ -122,6 +114,28 @@ pub struct Uniforms {
     #[serde(rename = "accumulator_scale")]
     /// Global scale factor
     pub accu_scl:   f32,
+
+// These two little fuckers like to mess things up
+// so we're gonna make them play nicely
+    #[serde(rename = "flow_field_x")]
+    /// Global flow field x
+    pub flow_x: f32,
+
+    #[serde(rename = "flow_field_y")]
+    /// Global flow field y
+    pub flow_y: f32,
+
+    #[serde(rename = "spawner_particle_r")]
+    /// Global default spawn color r
+    pub spaw_r: f32,
+
+    #[serde(rename = "spawner_particle_g")]
+    /// Global default spawn color g
+    pub spaw_g: f32,
+
+    #[serde(rename = "spawner_particle_b")]
+    /// Global default spawn color b
+    pub spaw_b: f32,
 }
 
 #[repr(C)]
@@ -142,9 +156,12 @@ pub struct Atomics {
 /// FlowManipulators and FlowCollectors
 pub struct Collider {
     /// Collider position
-    pub pos:       [f32; 2],
+    // fucking graphics card wants its shit like this so we'll fucking do it for you then
+    pub x:          f32,
+    pub y:          f32,
+
     /// Collider collision radius
-    pub rad2:       f32,
+    pub r2:         f32,
 }
 
 #[repr(C)]
@@ -171,15 +188,20 @@ pub struct Spawner {
     // They do not need to check for collisions,
     // meaning would only bloat the FlowCollider buffers.
     /// Spawn position
-    pub pos:       [f32; 2],
+    pub x:          f32,
+    pub y:          f32,
+    /*
     /// Spawn radius
     pub rad2:       f32,
+    */
     /// Particle scale
     pub scl:        f32,
     /// Variance of particle scale
     pub var:        f32,
     /// Color of particles
-    pub col:       [f32; 3],
+    pub r:          f32,
+    pub g:          f32,
+    pub b:          f32,
 }
 
 #[repr(C)]
