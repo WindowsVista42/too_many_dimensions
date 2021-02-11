@@ -10,40 +10,29 @@ macro_rules! dinfo {
 extern crate log;
 
 mod flow;
-mod state;
-mod view;
+mod flow_world;
+mod resources;
+mod view2d;
 
-use pollster::block_on;
+use crate::resources::{Mastermind, Resources};
+use flow_world::*;
 use serde::{Deserialize, Serialize};
-use state::*;
 use std::fs;
 use std::io::Read;
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::{Window, WindowBuilder};
+use winit::window::WindowBuilder;
 
 #[derive(Debug, Serialize, Deserialize)]
 // TODO: Add pretty printing
 pub struct GlobalConfig {
     window: WindowConfig,
-    flow: flow::Uniforms,
+    flow:   flow::Uniforms,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct WindowConfig {
     msaa: u32,
-}
-
-/// Toggle windows fullscreen setting when called
-fn toggle_fullscreen(state: &mut State, window: &Window) {
-    dinfo!("Fullscreen Toggled");
-    if state.fullscreen {
-        window.set_fullscreen(None);
-        state.fullscreen = false;
-    } else {
-        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-        state.fullscreen = true;
-    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -91,12 +80,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let now = std::time::Instant::now();
     dinfo!("State Start");
-    let mut state = block_on(State::new(&window, &global_config));
+    let mut mastermind = Mastermind {
+        resources: Resources::new(window, global_config),
+        world:     None,
+    };
+    mastermind.world = Some(Box::new(FlowWorld::new(&mastermind.resources)));
     dinfo!("State End ({} ms)", now.elapsed().as_millis());
 
     event_loop.run(move |event, _, control_flow| {
-        state.update(&event);
-        if state.quit {
+        mastermind.update(&event);
+        if mastermind.resources.quit {
             *control_flow = ControlFlow::Exit;
             if !exited {
                 dinfo!("Program Close ({} s)", p_st.elapsed().as_secs());
@@ -116,8 +109,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }, ..
                 }, ..
             } => {
-                if state.input.held_alt() {
-                    toggle_fullscreen(&mut state, &window);
+                if mastermind.resources.input.held_alt() {
+                    mastermind.resources.toggle_fullscreen();
                 }
             },
             #[rustfmt::skip]
@@ -130,20 +123,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }, ..
                 }, ..
             } => {
-                toggle_fullscreen(&mut state, &window);
+                mastermind.resources.toggle_fullscreen();
             }
             Event::RedrawRequested(_) => {
-                state.render();
+                mastermind.render();
             }
             Event::WindowEvent {
                 event: WindowEvent::Resized(physical_size),
                 ..
             } => {
                 dinfo!("Window Resized");
-                state.resize(physical_size);
+                mastermind.resize(physical_size);
             }
             Event::MainEventsCleared => {
-                window.request_redraw();
+                mastermind.resources.window.request_redraw();
             }
             _ => {}
         }

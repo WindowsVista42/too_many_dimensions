@@ -5,10 +5,10 @@ use std::fs::{read_to_string, write};
 use std::path::PathBuf;
 
 struct ShaderData {
-    src: String,
+    src:      String,
     src_path: PathBuf,
     spv_path: PathBuf,
-    kind: shaderc::ShaderKind,
+    kind:     shaderc::ShaderKind,
 }
 impl ShaderData {
     pub fn load(src_path: PathBuf) -> Result<Self> {
