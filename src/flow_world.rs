@@ -10,9 +10,9 @@ use crate::mastermind::World;
 use crate::resources::Resources;
 use crate::{flow, view2d};
 
-pub const FLOW_CS_SPV: &[u8] = include_bytes!("../spirv/flow.comp.spv");
-pub const FLOW_VS_SPV: &[u8] = include_bytes!("../spirv/flow.vert.spv");
-pub const FLOW_FS_SPV: &[u8] = include_bytes!("../spirv/flow.frag.spv");
+//pub const FLOW_CS_SPV: &[u8] = include_bytes!("../spirv/flow.comp.spv");
+//pub const FLOW_VS_SPV: &[u8] = include_bytes!("../spirv/flow.vert.spv");
+//pub const FLOW_FS_SPV: &[u8] = include_bytes!("../spirv/flow.frag.spv");
 
 pub struct FlowWorld {
     // UNIFORMS
@@ -310,21 +310,9 @@ impl FlowWorld {
 
         // SHADER LOADING
         dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
-        let flow_cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("FLOW CS MODULE"),
-            source: wgpu::util::make_spirv(FLOW_CS_SPV),
-            flags: wgpu::ShaderFlags::VALIDATION,
-        });
-        let flow_vs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("FLOW VS MODULE"),
-            source: wgpu::util::make_spirv(FLOW_VS_SPV),
-            flags: wgpu::ShaderFlags::VALIDATION,
-        });
-        let flow_fs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-            label: Some("FLOW FS MODULE"),
-            source: wgpu::util::make_spirv(FLOW_FS_SPV),
-            flags: wgpu::ShaderFlags::VALIDATION,
-        });
+        let flow_cs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
+        let flow_vs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.vert.spv"));
+        let flow_fs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
 
         // UNIFORMS
         dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
