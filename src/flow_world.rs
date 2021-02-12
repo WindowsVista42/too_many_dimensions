@@ -10,10 +10,6 @@ use crate::mastermind::World;
 use crate::resources::Resources;
 use crate::{flow, view2d};
 
-//pub const FLOW_CS_SPV: &[u8] = include_bytes!("../spirv/flow.comp.spv");
-//pub const FLOW_VS_SPV: &[u8] = include_bytes!("../spirv/flow.vert.spv");
-//pub const FLOW_FS_SPV: &[u8] = include_bytes!("../spirv/flow.frag.spv");
-
 pub struct FlowWorld {
     // UNIFORMS
     pub camera: view2d::Camera,
