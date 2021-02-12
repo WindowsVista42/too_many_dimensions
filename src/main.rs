@@ -1,5 +1,18 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
 
+use std::fs;
+use std::io::Read;
+
+use serde::{Deserialize, Serialize};
+use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::window::WindowBuilder;
+
+use flow_world::*;
+use mastermind::Mastermind;
+
+use crate::resources::Resources;
+
 macro_rules! dinfo {
     ($($arg:tt)*) => {
         log!(log::Level::Info, "{}\nLOCATION : {}:{}:{}\n", format!($($arg)*), file!(), line!(), column!());
@@ -11,23 +24,15 @@ extern crate log;
 
 mod flow;
 mod flow_world;
+mod mastermind;
 mod resources;
 mod view2d;
-
-use crate::resources::{Mastermind, Resources};
-use flow_world::*;
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io::Read;
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
-use winit::event_loop::{ControlFlow, EventLoop};
-use winit::window::WindowBuilder;
 
 #[derive(Debug, Serialize, Deserialize)]
 // TODO: Add pretty printing
 pub struct GlobalConfig {
     window: WindowConfig,
-    flow:   flow::Uniforms,
+    flow: flow::Uniforms,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
@@ -82,7 +87,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     dinfo!("State Start");
     let mut mastermind = Mastermind {
         resources: Resources::new(window, global_config),
-        world:     None,
+        world: None,
     };
     mastermind.world = Some(Box::new(FlowWorld::new(&mastermind.resources)));
     dinfo!("State End ({} ms)", now.elapsed().as_millis());

@@ -4,12 +4,12 @@ use bytemuck::{Pod, Zeroable};
 /// Top-down 2D camera
 pub struct Camera {
     // Movement
-    pub slow_spd:     f32,
+    pub slow_spd: f32,
     pub fast_spd_fac: f32,
     // Camera
-    pub pos:          glam::Vec2,
-    pub scl:          f32,
-    pub asp:          f32,
+    pub pos: glam::Vec2,
+    pub scl: f32,
+    pub asp: f32,
 }
 
 #[repr(C)]
@@ -31,10 +31,7 @@ impl Uniforms {
     }
 
     /// Update the view projection based on the camera
-    pub fn update_view_proj(
-        &mut self,
-        camera: &Camera,
-    ) {
+    pub fn update_view_proj(&mut self, camera: &Camera) {
         if camera.asp > 1.0 {
             self.view_pos = camera.pos.into();
             self.view_scl = [(1.0 / camera.asp) * camera.scl, camera.scl];

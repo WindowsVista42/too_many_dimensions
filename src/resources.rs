@@ -1,108 +1,51 @@
-use crate::GlobalConfig;
 use pollster::block_on;
 use winit::event::{Event, VirtualKeyCode};
 use winit::window::Window;
 use winit_input_helper::WinitInputHelper;
 
-pub trait World {
-    fn resize(
-        &mut self,
-        resources: &Resources,
-    );
-    fn update(
-        &mut self,
-        resources: &Resources,
-    );
-    fn render(
-        &mut self,
-        resources: &Resources,
-    );
-}
-
-pub struct Mastermind {
-    pub resources: Resources,
-    pub world:     Option<Box<dyn World>>,
-}
-impl Mastermind {
-    pub fn update(
-        &mut self,
-        event: &Event<()>,
-    ) {
-        self.resources.update(event);
-        self.world
-            .as_mut()
-            .expect("World not initialized")
-            .update(&self.resources);
-    }
-
-    pub fn resize(
-        &mut self,
-        new_size: winit::dpi::PhysicalSize<u32>,
-    ) {
-        self.resources.resize(new_size);
-        self.world
-            .as_mut()
-            .expect("World not initialized")
-            .resize(&self.resources);
-        self.world
-            .as_mut()
-            .expect("World not initialized")
-            .render(&self.resources);
-    }
-
-    pub fn render(&mut self) {
-        self.resources.render();
-        self.world
-            .as_mut()
-            .expect("World not initialized")
-            .render(&self.resources);
-    }
-}
+use crate::GlobalConfig;
 
 /// Global constant resources
 /// Different worlds will share these
 pub struct Resources {
     //
     // GLOBAL
-    pub window:        Window,
+    pub window: Window,
     pub global_config: GlobalConfig,
     //
     // INPUT
-    pub input:         WinitInputHelper,
+    pub input: WinitInputHelper,
     //
     // FLAGS
-    pub quit:          bool,
-    pub pause:         bool,
+    pub quit: bool,
+    pub pause: bool,
     /// Modified externally
-    pub fullscreen:    bool,
+    pub fullscreen: bool,
     //
     // INSTANCE
-    pub surface:       wgpu::Surface,
-    pub device:        wgpu::Device,
-    pub queue:         wgpu::Queue,
-    pub sc_desc:       wgpu::SwapChainDescriptor,
-    pub swap_chain:    wgpu::SwapChain,
-    pub sample_count:  u32,
+    pub surface: wgpu::Surface,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub sc_desc: wgpu::SwapChainDescriptor,
+    pub swap_chain: wgpu::SwapChain,
+    pub sample_count: u32,
     //
     // TIME
-    pub last_tick:     std::time::Instant,
-    pub delta:         f32,
-    pub elapsed_time:  std::time::Duration,
+    pub last_tick: std::time::Instant,
+    pub delta: f32,
+    pub elapsed_time: std::time::Duration,
     //
     // BUILD AFTER SELF
-    pub msaa_fbuffer:  Option<wgpu::TextureView>,
+    pub msaa_fbuffer: Option<wgpu::TextureView>,
     //
     // WINDOW
-    pub size:          winit::dpi::PhysicalSize<u32>,
-    pub frame_num:     usize,
-    pub active:        Option<usize>,
+    pub size: winit::dpi::PhysicalSize<u32>,
+    pub frame_num: usize,
+    pub active: Option<usize>,
 }
 
 impl Resources {
-    pub fn new(
-        window: Window,
-        global_config: GlobalConfig,
-    ) -> Self {
+    pub fn new(window: Window, global_config: GlobalConfig) -> Self {
         let now = std::time::Instant::now();
         // CONFIG
         let sample_count = global_config.window.msaa;
@@ -121,7 +64,7 @@ impl Resources {
         let adapter = block_on(async {
             instance
                 .request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference:   wgpu::PowerPreference::HighPerformance,
+                    power_preference: wgpu::PowerPreference::HighPerformance,
                     compatible_surface: Some(&surface),
                 })
                 .await
@@ -132,10 +75,10 @@ impl Resources {
             adapter
                 .request_device(
                     &wgpu::DeviceDescriptor {
-                        label:    None,
+                        label: None,
                         features: wgpu::Features::default()
                             | wgpu::Features::MAPPABLE_PRIMARY_BUFFERS,
-                        limits:   wgpu::Limits {
+                        limits: wgpu::Limits {
                             max_storage_buffers_per_shader_stage: 10,
                             ..Default::default()
                         },
@@ -147,10 +90,10 @@ impl Resources {
         .expect("COULD NOT BUILD LOGICAL DEVICE/QUEUE");
 
         let sc_desc = wgpu::SwapChainDescriptor {
-            usage:        wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format:       wgpu::TextureFormat::Bgra8Unorm,
-            width:        size.width,
-            height:       size.height,
+            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+            format: wgpu::TextureFormat::Bgra8Unorm,
+            width: size.width,
+            height: size.height,
             present_mode: wgpu::PresentMode::Mailbox,
         };
 
@@ -187,10 +130,7 @@ impl Resources {
         s
     }
 
-    pub fn update(
-        &mut self,
-        event: &Event<()>,
-    ) {
+    pub fn update(&mut self, event: &Event<()>) {
         if self.input.update(event) {
             if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
                 self.quit = true;
@@ -218,18 +158,18 @@ impl Resources {
     fn create_multisampled_framebuffer(&mut self) {
         if self.sample_count > 1 {
             let multisampled_texture_extent = wgpu::Extent3d {
-                width:  self.sc_desc.width,
+                width: self.sc_desc.width,
                 height: self.sc_desc.height,
-                depth:  1,
+                depth: 1,
             };
             let multisampled_frame_descriptor = &wgpu::TextureDescriptor {
-                size:            multisampled_texture_extent,
+                size: multisampled_texture_extent,
                 mip_level_count: 1,
-                sample_count:    self.sample_count,
-                dimension:       wgpu::TextureDimension::D2,
-                format:          self.sc_desc.format,
-                usage:           wgpu::TextureUsage::RENDER_ATTACHMENT,
-                label:           None,
+                sample_count: self.sample_count,
+                dimension: wgpu::TextureDimension::D2,
+                format: self.sc_desc.format,
+                usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+                label: None,
             };
             self.msaa_fbuffer = Some(
                 self.device
@@ -241,10 +181,7 @@ impl Resources {
         }
     }
 
-    pub fn resize(
-        &mut self,
-        new_size: winit::dpi::PhysicalSize<u32>,
-    ) {
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         self.size = new_size;
         self.sc_desc.width = new_size.width;
         self.sc_desc.height = new_size.height;
