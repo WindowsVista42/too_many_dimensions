@@ -176,7 +176,7 @@ impl FlowWorld {
         }: &Resources,
     ) {
         queue.write_buffer(
-            &flow_uniform_buffer,
+            flow_uniform_buffer,
             offset_of!(flow::Uniforms, dt) as _,
             bytemuck::cast_slice(&[*delta]),
         );
@@ -191,18 +191,18 @@ impl FlowWorld {
 
             let mut cpass =
                 encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
-            cpass.set_pipeline(&flow_compute_pipeline);
+            cpass.set_pipeline(flow_compute_pipeline);
             cpass.set_bind_group(0, &flow_bind_groups[*flow_buff_idx], &[]);
             cpass.dispatch(*flow_work_group_count, 1, 1);
         }
 
         if !pause {
-            queue.write_buffer(&flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
+            queue.write_buffer(flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
 
             encoder.copy_buffer_to_buffer(
-                &flow_atomic_buffer,
+                flow_atomic_buffer,
                 offset_of!(flow::Atomics, atom_ct) as _,
-                &flow_uniform_buffer,
+                flow_uniform_buffer,
                 offset_of!(flow::Uniforms, ct) as _,
                 std::mem::size_of::<u32>() as _,
             );
