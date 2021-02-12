@@ -6,9 +6,13 @@ use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
 
-use crate::resources::Resources;
 use crate::mastermind::World;
+use crate::resources::Resources;
 use crate::{flow, view2d};
+
+pub const FLOW_CS_SPV: &[u8] = include_bytes!("../spirv/flow.comp.spv");
+pub const FLOW_VS_SPV: &[u8] = include_bytes!("../spirv/flow.vert.spv");
+pub const FLOW_FS_SPV: &[u8] = include_bytes!("../spirv/flow.frag.spv");
 
 pub struct FlowWorld {
     // UNIFORMS
@@ -148,30 +152,30 @@ impl FlowWorld {
     #[inline]
     pub fn render_internal(
         Self {
-            flow_uniform_buffer,
-            flow_buff_idx,
-            flow_work_group_count,
-            flow_count,
-            flow_compute_pipeline,
-            flow_bind_groups,
-            flow_atomic_buffer,
-            flow_indices_buffer,
-            flow_vertices_buffer,
-            flow_render_pipeline,
             view_uniform_bind_group,
+            flow_compute_pipeline,
+            flow_render_pipeline,
+            flow_uniform_buffer,
+            flow_atomic_buffer,
+            flow_bind_groups,
             flow_buffers,
+            flow_vertices_buffer,
+            flow_indices_buffer,
             flow_num_indices,
+            flow_work_group_count,
+            flow_buff_idx,
+            flow_count,
             ..
         }: &mut Self,
         Resources {
-            queue,
-            delta,
-            device,
             pause,
-            active,
-            frame_num,
+            device,
+            queue,
             swap_chain,
+            delta,
             msaa_fbuffer,
+            frame_num,
+            active,
             ..
         }: &Resources,
     ) {
@@ -306,12 +310,21 @@ impl FlowWorld {
 
         // SHADER LOADING
         dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
-        let flow_cs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
-        let flow_vs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.vert.spv"));
-        let flow_fs_module =
-            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
+        let flow_cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("FLOW CS MODULE"),
+            source: wgpu::util::make_spirv(FLOW_CS_SPV),
+            flags: wgpu::ShaderFlags::VALIDATION,
+        });
+        let flow_vs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("FLOW VS MODULE"),
+            source: wgpu::util::make_spirv(FLOW_VS_SPV),
+            flags: wgpu::ShaderFlags::VALIDATION,
+        });
+        let flow_fs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+            label: Some("FLOW FS MODULE"),
+            source: wgpu::util::make_spirv(FLOW_FS_SPV),
+            flags: wgpu::ShaderFlags::VALIDATION,
+        });
 
         // UNIFORMS
         dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
