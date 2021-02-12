@@ -1,43 +1,22 @@
-use crate::{flow, view, GlobalConfig};
 use memoffset::*;
 use pollster::block_on;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use rayon::prelude::*;
 use wgpu::util::DeviceExt;
-use winit::event::{Event, VirtualKeyCode};
-use winit::window::Window;
-use winit_input_helper::WinitInputHelper;
+use winit::event::VirtualKeyCode;
 
-pub struct State {
-    // INPUT
-    pub input: WinitInputHelper,
+use crate::resources::Resources;
+use crate::mastermind::World;
+use crate::{flow, view2d};
 
-    // FLAGS
-    pub quit: bool,
-    pub pause: bool,
-    /// Modified externally
-    pub fullscreen: bool,
-
-    // INSTANCE
-    pub surface: wgpu::Surface,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-    pub sc_desc: wgpu::SwapChainDescriptor,
-    pub swap_chain: wgpu::SwapChain,
-    pub sample_count: u32,
-
+pub struct FlowWorld {
     // UNIFORMS
-    pub camera: view::Camera,
-    pub view_uniforms: view::Uniforms,
+    pub camera: view2d::Camera,
+    pub view_uniforms: view2d::Uniforms,
     pub view_uniform_buffer: wgpu::Buffer,
     pub view_uniform_bind_group: wgpu::BindGroup,
-
-    // TIME
-    pub last_tick: std::time::Instant,
-    pub delta: f32,
-    pub flow_elapsed_time: std::time::Duration,
-
+    //
     // FLOW
     pub flow_compute_pipeline: wgpu::ComputePipeline,
     pub flow_render_pipeline: wgpu::RenderPipeline,
@@ -45,86 +24,285 @@ pub struct State {
     pub flow_uniform_buffer: wgpu::Buffer,
     pub flow_atomics: flow::Atomics,
     pub flow_atomic_buffer: wgpu::Buffer,
+    /// Alternating buffer
     pub flow_bind_groups: Vec<wgpu::BindGroup>,
     /// Alternating buffer
     pub flow_buffers: Vec<wgpu::Buffer>,
-    /// Alternating buffer
     pub flow_vertices_buffer: wgpu::Buffer,
     pub flow_indices_buffer: wgpu::Buffer,
     pub flow_num_indices: u32,
     pub flow_work_group_count: u32,
     /// Buffer idx for compute
     pub flow_buff_idx: usize,
+    /// Max number of flow particles
     pub flow_cap: u32,
+    /// Current number of flow particles
     pub flow_count: u32,
+    //
     // Spawners
     pub spaw_coll_buffer: wgpu::Buffer,
     pub spawner_buffer: wgpu::Buffer,
+    //
     // Manipulators
     pub mani_coll_buffer: wgpu::Buffer,
     pub manipulator_buffer: wgpu::Buffer,
+    //
     // Accumulators
     pub accu_coll_buffer: wgpu::Buffer,
     pub accumulator_buffer: wgpu::Buffer,
-
-    // BUILD AFTER SELF
-    pub multisampled_framebuffer: Option<wgpu::TextureView>,
-
-    // WINDOW
-    pub size: winit::dpi::PhysicalSize<u32>,
-    pub frame_num: usize,
-    pub active: Option<usize>,
 }
 
-impl State {
-    pub async fn new(window: &Window, global_config: &GlobalConfig) -> Self {
+impl World for FlowWorld {
+    /// Runs internal resize functions
+    fn resize(&mut self, Resources { queue, sc_desc, .. }: &Resources) {
+        // Probably doesn't need to be moved to internal functions because this is simple
+        self.camera.asp = sc_desc.width as f32 / sc_desc.height as f32;
+
+        self.view_uniforms.update_view_proj(&self.camera);
+        queue.write_buffer(
+            &self.view_uniform_buffer,
+            offset_of!(view2d::Uniforms, view_pos) as _,
+            bytemuck::cast_slice(&[self.view_uniforms]),
+        );
+    }
+
+    /// Runs internal update functions
+    //TODO: This might not be needed?
+    fn update(&mut self, Resources { .. }: &Resources) {}
+
+    /// Runs internal render functions
+    fn render(&mut self, resources: &Resources) {
+        Self::update_camera(self, resources);
+        Self::render_internal(self, resources);
+    }
+}
+
+impl FlowWorld {
+    #[inline]
+    pub fn update_camera(
+        Self {
+            camera,
+            view_uniforms,
+            view_uniform_buffer,
+            ..
+        }: &mut Self,
+        Resources {
+            input,
+            delta,
+            queue,
+            ..
+        }: &Resources,
+    ) {
+        // Needs to be done once, meaning I can't put this in the update() sadly
+        // Its also probably better to do it here and all that
+
+        let mut changed = false;
+        // Moving around the camera
+        {
+            let mut cam_pos_delta = glam::Vec2::zero();
+            if input.key_held(VirtualKeyCode::A) {
+                cam_pos_delta.x -= camera.slow_spd;
+            }
+            if input.key_held(VirtualKeyCode::D) {
+                cam_pos_delta.x += camera.slow_spd;
+            }
+            if input.key_held(VirtualKeyCode::S) {
+                cam_pos_delta.y -= camera.slow_spd;
+            }
+            if input.key_held(VirtualKeyCode::W) {
+                cam_pos_delta.y += camera.slow_spd;
+            }
+            if cam_pos_delta != glam::Vec2::zero() {
+                changed = true;
+                cam_pos_delta = cam_pos_delta.normalize() * *delta;
+
+                if input.key_held(VirtualKeyCode::LShift) {
+                    cam_pos_delta *= camera.fast_spd_fac;
+                }
+
+                camera.pos += cam_pos_delta;
+            }
+        }
+
+        // Zooming the camera
+        {
+            let scroll_diff = input.scroll_diff();
+            if scroll_diff != 0.0 {
+                changed = true;
+                let zoom_fac = camera.scl.log2() + (scroll_diff * 0.25);
+                camera.scl = (2f32).powf(zoom_fac);
+            }
+        }
+
+        if changed {
+            view_uniforms.update_view_proj(camera);
+            queue.write_buffer(
+                view_uniform_buffer,
+                offset_of!(view2d::Uniforms, view_pos) as _,
+                bytemuck::cast_slice(&[*view_uniforms]),
+            );
+        }
+    }
+
+    // TODO: HARD REFACTOR, this is messy
+    #[inline]
+    pub fn render_internal(
+        Self {
+            flow_uniform_buffer,
+            flow_buff_idx,
+            flow_work_group_count,
+            flow_count,
+            flow_compute_pipeline,
+            flow_bind_groups,
+            flow_atomic_buffer,
+            flow_indices_buffer,
+            flow_vertices_buffer,
+            flow_render_pipeline,
+            view_uniform_bind_group,
+            flow_buffers,
+            flow_num_indices,
+            ..
+        }: &mut Self,
+        Resources {
+            queue,
+            delta,
+            device,
+            pause,
+            active,
+            frame_num,
+            swap_chain,
+            msaa_fbuffer,
+            ..
+        }: &Resources,
+    ) {
+        queue.write_buffer(
+            flow_uniform_buffer,
+            offset_of!(flow::Uniforms, dt) as _,
+            bytemuck::cast_slice(&[*delta]),
+        );
+
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("COMPUTE ENCODER"),
+        });
+
+        if !pause {
+            *flow_buff_idx ^= 1;
+            *flow_work_group_count = ((*flow_count as f32) / (64.0)).ceil() as u32;
+
+            let mut cpass =
+                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
+            cpass.set_pipeline(flow_compute_pipeline);
+            cpass.set_bind_group(0, &flow_bind_groups[*flow_buff_idx], &[]);
+            cpass.dispatch(*flow_work_group_count, 1, 1);
+        }
+
+        if !pause {
+            queue.write_buffer(flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
+
+            encoder.copy_buffer_to_buffer(
+                flow_atomic_buffer,
+                offset_of!(flow::Atomics, atom_ct) as _,
+                flow_uniform_buffer,
+                offset_of!(flow::Uniforms, ct) as _,
+                std::mem::size_of::<u32>() as _,
+            );
+        }
+
+        // Only render valid frames. See resize method.
+        if let Some(active) = active {
+            if *active >= *frame_num {
+                queue.submit(std::iter::once(encoder.finish()));
+                return;
+            }
+        } else {
+            queue.submit(std::iter::once(encoder.finish()));
+            return;
+        }
+
+        if !pause {
+            queue.submit(std::iter::once(encoder.finish()));
+
+            // Set internal count to correct value
+            block_on(async {
+                let buffer_slice = flow_uniform_buffer.slice(..);
+                let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
+                device.poll(wgpu::Maintain::Wait);
+
+                buffer_future.await.unwrap();
+                let buffer = buffer_slice.get_mapped_range();
+
+                let (_, raw, _) = unsafe { buffer.align_to::<flow::Uniforms>() };
+
+                *flow_count = raw[0].ct;
+
+                drop(buffer);
+                flow_uniform_buffer.unmap();
+            });
+        }
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("COMPUTE ENCODER"),
+        });
+
+        let frame = swap_chain
+            .get_current_frame()
+            .expect("TIMEOUT GETTING TEXTURE")
+            .output;
+
+        {
+            let ops = wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                store: true,
+            };
+
+            let rpass_color_attachment = match msaa_fbuffer {
+                Some(_) => wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &msaa_fbuffer.as_ref().unwrap(),
+                    resolve_target: Some(&frame.view),
+                    ops,
+                },
+                None => wgpu::RenderPassColorAttachmentDescriptor {
+                    attachment: &frame.view,
+                    resolve_target: None,
+                    ops,
+                },
+            };
+
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[rpass_color_attachment],
+                depth_stencil_attachment: None,
+            });
+
+            // RENDER FLOW PARTICLES
+            rpass.set_pipeline(flow_render_pipeline);
+            rpass.set_bind_group(0, view_uniform_bind_group, &[]);
+            rpass.set_vertex_buffer(0, flow_buffers[*flow_buff_idx ^ 1].slice(..));
+            rpass.set_vertex_buffer(1, flow_vertices_buffer.slice(..));
+            rpass.set_index_buffer(flow_indices_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            rpass.draw_indexed(0..*flow_num_indices, 0, 0..*flow_count as _);
+        }
+
+        queue.submit(std::iter::once(encoder.finish()));
+
+        assert!(*flow_count <= flow::MAX_NUM_FLOW as u32);
+    }
+
+    pub fn new(
+        Resources {
+            device,
+            sc_desc,
+            global_config,
+            ..
+        }: &Resources,
+    ) -> Self {
         let now = std::time::Instant::now();
         // CONFIG
         let sample_count = global_config.window.msaa;
-
-        // INPUT
-        let input = WinitInputHelper::new();
-
-        // FLAGS
-        let fullscreen = window.fullscreen().is_some();
-
-        // INSTANCE
-        dinfo!("Instance ({} ms)", now.elapsed().as_millis());
-        let size = window.inner_size();
-        let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
-        let surface = unsafe { instance.create_surface(window) };
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: Some(&surface),
-            })
-            .await
-            .expect("COULD NOT FIND GPU");
-
-        let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    features: wgpu::Features::default() | wgpu::Features::MAPPABLE_PRIMARY_BUFFERS,
-                    limits: wgpu::Limits {
-                        max_storage_buffers_per_shader_stage: 10,
-                        ..Default::default()
-                    },
-                },
-                None,
-            )
-            .await
-            .expect("COULD NOT BUILD LOGICAL DEVICE/QUEUE");
-
-        let sc_desc = wgpu::SwapChainDescriptor {
-            usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-            format: wgpu::TextureFormat::Bgra8Unorm,
-            width: size.width,
-            height: size.height,
-            present_mode: wgpu::PresentMode::Mailbox,
-        };
-
-        let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         // SHADER LOADING
         dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
@@ -137,7 +315,7 @@ impl State {
 
         // UNIFORMS
         dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
-        let camera = view::Camera {
+        let camera = view2d::Camera {
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
             pos: glam::Vec2::zero(),
@@ -145,7 +323,7 @@ impl State {
             asp: sc_desc.width as f32 / sc_desc.height as f32,
         };
 
-        let mut view_uniforms = view::Uniforms::default();
+        let mut view_uniforms = view2d::Uniforms::default();
         view_uniforms.update_view_proj(&camera);
 
         let view_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -164,7 +342,7 @@ impl State {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: wgpu::BufferSize::new(
-                            std::mem::size_of::<view::Uniforms>() as _,
+                            std::mem::size_of::<view2d::Uniforms>() as _,
                         ),
                     },
                     count: None,
@@ -242,7 +420,8 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_FLOW as usize * std::mem::size_of::<flow::Particle>())
+                                (flow::MAX_NUM_FLOW as usize
+                                    * std::mem::size_of::<flow::Particle>())
                                     as _,
                             ),
                         },
@@ -256,7 +435,8 @@ impl State {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_FLOW as usize * std::mem::size_of::<flow::Particle>())
+                                (flow::MAX_NUM_FLOW as usize
+                                    * std::mem::size_of::<flow::Particle>())
                                     as _,
                             ),
                         },
@@ -265,12 +445,16 @@ impl State {
                     // Spawner Colliders
                     wgpu::BindGroupLayoutEntry {
                         binding: 4,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_SPAW as usize * std::mem::size_of::<flow::SpawnerCollider>()) as _,
+                                (flow::MAX_NUM_SPAW as usize
+                                    * std::mem::size_of::<flow::SpawnerCollider>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -278,12 +462,15 @@ impl State {
                     // Spawners
                     wgpu::BindGroupLayoutEntry {
                         binding: 5,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_SPAW as usize * std::mem::size_of::<flow::Spawner>()) as _,
+                                (flow::MAX_NUM_SPAW as usize * std::mem::size_of::<flow::Spawner>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -291,12 +478,16 @@ impl State {
                     // Manipulator Colliders
                     wgpu::BindGroupLayoutEntry {
                         binding: 6,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_MANI as usize * std::mem::size_of::<flow::Collider>()) as _,
+                                (flow::MAX_NUM_MANI as usize
+                                    * std::mem::size_of::<flow::Collider>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -304,12 +495,16 @@ impl State {
                     // Manipulators
                     wgpu::BindGroupLayoutEntry {
                         binding: 7,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_MANI as usize * std::mem::size_of::<flow::Manipulator>()) as _,
+                                (flow::MAX_NUM_MANI as usize
+                                    * std::mem::size_of::<flow::Manipulator>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -317,12 +512,16 @@ impl State {
                     // Accumulator Colliders
                     wgpu::BindGroupLayoutEntry {
                         binding: 8,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_ACCU as usize * std::mem::size_of::<flow::Collider>()) as _,
+                                (flow::MAX_NUM_ACCU as usize
+                                    * std::mem::size_of::<flow::Collider>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -330,12 +529,16 @@ impl State {
                     // Accumulators
                     wgpu::BindGroupLayoutEntry {
                         binding: 9,
-                        visibility: wgpu::ShaderStage::COMPUTE | wgpu::ShaderStage::VERTEX | wgpu::ShaderStage::FRAGMENT,
+                        visibility: wgpu::ShaderStage::COMPUTE
+                            | wgpu::ShaderStage::VERTEX
+                            | wgpu::ShaderStage::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
                             has_dynamic_offset: false,
                             min_binding_size: wgpu::BufferSize::new(
-                                (flow::MAX_NUM_ACCU as usize * std::mem::size_of::<flow::Accumulator>()) as _,
+                                (flow::MAX_NUM_ACCU as usize
+                                    * std::mem::size_of::<flow::Accumulator>())
+                                    as _,
                             ),
                         },
                         count: None,
@@ -447,7 +650,6 @@ impl State {
                 }
             });
 
-
         let (init_spaw_coll, mut init_mani_coll, mut init_accu_coll) = (
             // Spawner 'Colliders'
             vec![flow::SpawnerCollider { rte: 1.0 }; flow::MAX_NUM_SPAW],
@@ -456,7 +658,7 @@ impl State {
                 flow::Collider {
                     x: 0.0,
                     y: 0.0,
-                    r2: 2.0
+                    r2: 2.0,
                 };
                 flow::MAX_NUM_MANI
             ],
@@ -528,7 +730,7 @@ impl State {
                     flow::Manipulator {
                         acc: 1.0,
                         spd: 1.0,
-                        rot: 0.0
+                        rot: 0.0,
                     };
                     flow::MAX_NUM_MANI
                 ]
@@ -551,14 +753,14 @@ impl State {
         let accu_coll_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("ACCUMULATOR COLLIDERS"),
             contents: &bytemuck::cast_slice(init_accu_coll.as_slice()),
-            usage: wgpu::BufferUsage::STORAGE
-                | wgpu::BufferUsage::COPY_DST,
+            usage: wgpu::BufferUsage::STORAGE | wgpu::BufferUsage::COPY_DST,
         });
         let accumulator_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("ACCUMULATOR BUFFER"),
-            contents: &bytemuck::cast_slice(
-                &*vec![flow::Accumulator { rte: 1.0 }; flow::MAX_NUM_ACCU],
-            ),
+            contents: &bytemuck::cast_slice(&*vec![
+                flow::Accumulator { rte: 1.0 };
+                flow::MAX_NUM_ACCU
+            ]),
             usage: wgpu::BufferUsage::VERTEX
                 | wgpu::BufferUsage::STORAGE
                 | wgpu::BufferUsage::COPY_DST,
@@ -631,34 +833,12 @@ impl State {
 
         let flow_num_indices = 8;
 
-        let mut s = Self {
-            // INPUT
-            input,
-
-            // FLAGS
-            quit: false,
-            pause: false,
-            fullscreen,
-            flow_buff_idx: 0,
-
-            // INSTANCE
-            surface,
-            device,
-            queue,
-            sc_desc,
-            swap_chain,
-            sample_count,
-
+        Self {
             // UNIFORMS
             camera,
             view_uniforms,
             view_uniform_buffer,
             view_uniform_bind_group,
-
-            // TIME
-            last_tick: std::time::Instant::now(),
-            delta: 0.0,
-            flow_elapsed_time: std::time::Duration::new(0, 0),
 
             // FLOW
             flow_compute_pipeline,
@@ -674,6 +854,7 @@ impl State {
             flow_num_indices,
 
             flow_work_group_count,
+            flow_buff_idx: 0,
             flow_cap: flow::MAX_NUM_FLOW as u32,
             flow_count: flow_uniforms.ct as u32,
 
@@ -683,242 +864,6 @@ impl State {
             manipulator_buffer,
             accu_coll_buffer,
             accumulator_buffer,
-
-            multisampled_framebuffer: None,
-
-            // WINDOW
-            size,
-            frame_num: 0,
-            active: Some(0),
-        };
-
-        dinfo!(
-            "Multisampled Framebuffer ({} ms)",
-            now.elapsed().as_millis()
-        );
-        s.create_multisampled_framebuffer();
-
-        s
-    }
-
-    fn create_multisampled_framebuffer(&mut self) {
-        if self.sample_count > 1 {
-            let multisampled_texture_extent = wgpu::Extent3d {
-                width: self.sc_desc.width,
-                height: self.sc_desc.height,
-                depth: 1,
-            };
-            let multisampled_frame_descriptor = &wgpu::TextureDescriptor {
-                size: multisampled_texture_extent,
-                mip_level_count: 1,
-                sample_count: self.sample_count,
-                dimension: wgpu::TextureDimension::D2,
-                format: self.sc_desc.format,
-                usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
-                label: None,
-            };
-            self.multisampled_framebuffer = Some(
-                self.device
-                    .create_texture(multisampled_frame_descriptor)
-                    .create_view(&wgpu::TextureViewDescriptor::default()),
-            );
-        } else {
-            self.multisampled_framebuffer = None;
         }
-    }
-
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        self.size = new_size;
-        self.sc_desc.width = new_size.width;
-        self.sc_desc.height = new_size.height;
-
-        // Taken from the wgpu-rs "Water" example
-        if self.sc_desc.width == 0 && self.sc_desc.height == 0 {
-            // Stop rendering altogether.
-            self.active = None;
-            return;
-        } else {
-            // The next frame queued is the wrong size: (0, 0),
-            // so we skip a frame to avoid crashes where our
-            // textures are the correct (window) size, and the
-            // frame is still (0, 0).
-            self.active = Some(self.frame_num + 1);
-        }
-
-        self.swap_chain = self.device.create_swap_chain(&self.surface, &self.sc_desc);
-        self.create_multisampled_framebuffer();
-
-        self.camera.asp = self.sc_desc.width as f32 / self.sc_desc.height as f32;
-
-        self.update_view_uniforms();
-
-        self.render();
-    }
-
-    pub fn update(&mut self, event: &Event<()>) {
-        if self.input.update(event) {
-            if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
-                self.quit = true;
-                return;
-            }
-            if self.input.key_pressed(VirtualKeyCode::Space) {
-                self.pause = !self.pause;
-            }
-
-            if self.camera.update(&self.input, self.delta) {
-                self.update_view_uniforms();
-            }
-        }
-    }
-
-    // TODO: AGGRESSIVELY REFACTOR
-    // This code is messy and needs to be cleaned up
-    pub fn render(&mut self) {
-        self.frame_num += 1;
-
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("COMPUTE ENCODER"),
-            });
-
-        if !self.pause {
-            self.flow_buff_idx ^= 1;
-            self.flow_work_group_count = ((self.flow_count as f32) / (64.0)).ceil() as u32;
-
-            let mut cpass =
-                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
-            cpass.set_pipeline(&self.flow_compute_pipeline);
-            cpass.set_bind_group(0, &self.flow_bind_groups[self.flow_buff_idx], &[]);
-            cpass.dispatch(self.flow_work_group_count, 1, 1);
-        }
-
-        if !self.pause {
-            self.queue
-                .write_buffer(&self.flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
-
-            encoder.copy_buffer_to_buffer(
-                &self.flow_atomic_buffer,
-                offset_of!(flow::Atomics, atom_ct) as _,
-                &self.flow_uniform_buffer,
-                offset_of!(flow::Uniforms, ct) as _,
-                std::mem::size_of::<u32>() as _,
-            );
-        }
-
-        // Only render valid frames. See resize method.
-        if let Some(active) = self.active {
-            if active >= self.frame_num {
-                self.queue.submit(std::iter::once(encoder.finish()));
-                self.update_time_info();
-                return;
-            }
-        } else {
-            self.queue.submit(std::iter::once(encoder.finish()));
-            self.update_time_info();
-            return;
-        }
-
-        if !self.pause {
-            self.queue.submit(std::iter::once(encoder.finish()));
-
-            // Set internal count to correct value
-            block_on(async {
-                let buffer_slice = self.flow_uniform_buffer.slice(..);
-                let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
-                self.device.poll(wgpu::Maintain::Wait);
-
-                buffer_future.await.unwrap();
-                let buffer = buffer_slice.get_mapped_range();
-
-                let (_, raw, _) = unsafe { buffer.align_to::<flow::Uniforms>() };
-
-                self.flow_count = raw[0].ct;
-
-                drop(buffer);
-                self.flow_uniform_buffer.unmap();
-            });
-        }
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("COMPUTE ENCODER"),
-            });
-
-        let frame = self
-            .swap_chain
-            .get_current_frame()
-            .expect("TIMEOUT GETTING TEXTURE")
-            .output;
-
-        {
-            let ops = wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 1.0,
-                }),
-                store: true,
-            };
-
-            let rpass_color_attachment = match self.multisampled_framebuffer {
-                Some(_) => wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &self.multisampled_framebuffer.as_ref().unwrap(),
-                    resolve_target: Some(&frame.view),
-                    ops,
-                },
-                None => wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &frame.view,
-                    resolve_target: None,
-                    ops,
-                },
-            };
-
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[rpass_color_attachment],
-                depth_stencil_attachment: None,
-            });
-
-            // RENDER FLOW PARTICLES
-            rpass.set_pipeline(&self.flow_render_pipeline);
-            rpass.set_bind_group(0, &self.view_uniform_bind_group, &[]);
-            rpass.set_vertex_buffer(0, self.flow_buffers[self.flow_buff_idx ^ 1].slice(..));
-            rpass.set_vertex_buffer(1, self.flow_vertices_buffer.slice(..));
-            rpass.set_index_buffer(
-                self.flow_indices_buffer.slice(..),
-                wgpu::IndexFormat::Uint16,
-            );
-            rpass.draw_indexed(0..self.flow_num_indices, 0, 0..self.flow_count as _);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        self.update_time_info();
-        assert!(self.flow_count <= flow::MAX_NUM_FLOW as u32);
-    }
-
-    fn update_view_uniforms(&mut self) {
-        self.view_uniforms.update_view_proj(&self.camera);
-        self.queue.write_buffer(
-            &self.view_uniform_buffer,
-            offset_of!(view::Uniforms, view_pos) as _,
-            bytemuck::cast_slice(&[self.view_uniforms]),
-        );
-    }
-
-    // Update all sim deltas
-    fn update_time_info(&mut self) {
-        self.delta = self.last_tick.elapsed().as_secs_f32();
-        if !self.pause {
-            self.flow_elapsed_time += self.last_tick.elapsed();
-        }
-        self.queue.write_buffer(
-            &self.flow_uniform_buffer,
-            offset_of!(flow::Uniforms, dt) as _,
-            bytemuck::cast_slice(&[self.delta]),
-        );
-        self.last_tick = std::time::Instant::now();
     }
 }

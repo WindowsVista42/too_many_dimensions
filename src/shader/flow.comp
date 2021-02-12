@@ -160,6 +160,7 @@ layout(binding = 9) buffer Accumulators {
 // Move our particle
 // Increment atomic counter
 void main() {
+    /*
     uint sflag = 0;
     // TODO: Finish this
     for(uint i = 0; i < spaw_ct; i++) {
@@ -171,6 +172,7 @@ void main() {
         // SPAWN A PARTICLE
         // INCREMENT ATOMIC COUNTER
     }
+    */
 
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= ct) return;
@@ -190,7 +192,7 @@ void main() {
 
         // Early return, effectively deleting the particle
         // TODO: Count this towards some objective, likely in a uniform
-        if(prod2 < coll_rad2) {
+        if (prod2 < coll_rad2) {
             if(prod2 < coll_rad2 * 0.0625) { return; }
             const vec2 force_dir = -vec2(vpos.x - coll_pos.x, vpos.y - coll_pos.y);
 
@@ -198,9 +200,9 @@ void main() {
             vpos += vvel * dt;
 
             // Really shitty speed capping, but it looks cool
-            if      (vvel.x >  flow_max) vvel.x =  flow_max;
+            if (vvel.x >  flow_max) vvel.x =  flow_max;
             else if (vvel.x < -flow_max) vvel.x = -flow_max;
-            if      (vvel.y >  flow_max) vvel.y =  flow_max;
+            if (vvel.y >  flow_max) vvel.y =  flow_max;
             else if (vvel.y < -flow_max) vvel.y = -flow_max;
 
             flag = 1;
