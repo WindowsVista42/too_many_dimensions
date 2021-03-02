@@ -1,16 +1,19 @@
 use memoffset::*;
-use pollster::block_on;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
 
-use crate::mastermind::World;
+use crate::dinfo;
 use crate::resources::Resources;
+use crate::util;
+use crate::util::{Executor, MultiRef, World};
 use crate::{flow, view2d};
+use pollster::block_on;
+use std::cell::UnsafeCell;
 
-pub struct FlowWorld {
+pub struct Flow {
     // UNIFORMS
     pub camera: view2d::Camera,
     pub view_uniforms: view2d::Uniforms,
@@ -52,32 +55,22 @@ pub struct FlowWorld {
     pub accumulator_buffer: wgpu::Buffer,
 }
 
-impl World for FlowWorld {
-    /// Runs internal resize functions
-    fn resize(&mut self, Resources { queue, sc_desc, .. }: &Resources) {
-        // Probably doesn't need to be moved to internal functions because this is simple
-        self.camera.asp = sc_desc.width as f32 / sc_desc.height as f32;
-
-        self.view_uniforms.update_view_proj(&self.camera);
+impl Flow {
+    #[inline]
+    pub fn update_info(
+        Self {
+            flow_uniform_buffer,
+            ..
+        }: &mut Self,
+        Resources { delta, queue, .. }: &Resources,
+    ) {
         queue.write_buffer(
-            &self.view_uniform_buffer,
-            offset_of!(view2d::Uniforms, view_pos) as _,
-            bytemuck::cast_slice(&[self.view_uniforms]),
+            flow_uniform_buffer,
+            offset_of!(flow::Uniforms, dt) as _,
+            bytemuck::cast_slice(&[*delta]),
         );
     }
 
-    /// Runs internal update functions
-    //TODO: This might not be needed?
-    fn update(&mut self, Resources { .. }: &Resources) {}
-
-    /// Runs internal render functions
-    fn render(&mut self, resources: &Resources) {
-        Self::update_camera(self, resources);
-        Self::render_internal(self, resources);
-    }
-}
-
-impl FlowWorld {
     #[inline]
     pub fn update_camera(
         Self {
@@ -93,9 +86,6 @@ impl FlowWorld {
             ..
         }: &Resources,
     ) {
-        // Needs to be done once, meaning I can't put this in the update() sadly
-        // Its also probably better to do it here and all that
-
         let mut changed = false;
         // Moving around the camera
         {
@@ -144,48 +134,34 @@ impl FlowWorld {
         }
     }
 
-    // TODO: HARD REFACTOR, this is messy
     #[inline]
-    pub fn render_internal(
+    pub fn update_flow_world(
         Self {
-            view_uniform_bind_group,
-            flow_compute_pipeline,
-            flow_render_pipeline,
             flow_uniform_buffer,
             flow_atomic_buffer,
-            flow_bind_groups,
-            flow_buffers,
-            flow_vertices_buffer,
-            flow_indices_buffer,
-            flow_num_indices,
             flow_work_group_count,
+            flow_compute_pipeline,
+            flow_bind_groups,
             flow_buff_idx,
             flow_count,
             ..
         }: &mut Self,
         Resources {
-            pause,
-            device,
             queue,
-            swap_chain,
-            delta,
-            msaa_fbuffer,
-            frame_num,
-            active,
+            device,
+            pause,
             ..
         }: &Resources,
     ) {
-        queue.write_buffer(
-            flow_uniform_buffer,
-            offset_of!(flow::Uniforms, dt) as _,
-            bytemuck::cast_slice(&[*delta]),
-        );
+        if *pause {
+            return;
+        }
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("COMPUTE ENCODER"),
         });
 
-        if !pause {
+        {
             *flow_buff_idx ^= 1;
             *flow_work_group_count = ((*flow_count as f32) / (64.0)).ceil() as u32;
 
@@ -196,9 +172,8 @@ impl FlowWorld {
             cpass.dispatch(*flow_work_group_count, 1, 1);
         }
 
-        if !pause {
+        {
             queue.write_buffer(flow_atomic_buffer, 0u64, bytemuck::cast_slice(&[0]));
-
             encoder.copy_buffer_to_buffer(
                 flow_atomic_buffer,
                 offset_of!(flow::Atomics, atom_ct) as _,
@@ -206,39 +181,71 @@ impl FlowWorld {
                 offset_of!(flow::Uniforms, ct) as _,
                 std::mem::size_of::<u32>() as _,
             );
-        }
 
+            queue.submit(std::iter::once(encoder.finish()));
+        }
+    }
+
+    pub fn update_flow_count(
+        Self {
+            flow_uniform_buffer,
+            flow_count,
+            ..
+        }: &mut Self,
+        Resources { device, .. }: &Resources,
+    ) {
+        // Set internal count to correct value
+        block_on(async {
+            let buffer_slice = flow_uniform_buffer.slice(..);
+            let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
+            device.poll(wgpu::Maintain::Wait);
+
+            buffer_future.await.unwrap();
+            let buffer = buffer_slice.get_mapped_range();
+
+            let (_, raw, _) = unsafe { buffer.align_to::<flow::Uniforms>() };
+
+            *flow_count = raw[0].ct;
+
+            drop(buffer);
+            flow_uniform_buffer.unmap();
+        });
+
+        assert!(*flow_count <= flow::MAX_NUM_FLOW as u32);
+    }
+
+    #[inline]
+    pub fn render_flow_world(
+        Self {
+            flow_buff_idx,
+            flow_count,
+            view_uniform_bind_group,
+            flow_render_pipeline,
+            flow_buffers,
+            flow_vertices_buffer,
+            flow_indices_buffer,
+            flow_num_indices,
+            ..
+        }: &mut Self,
+        Resources {
+            device,
+            queue,
+            swap_chain,
+            msaa_fbuffer,
+            active,
+            frame_num,
+            ..
+        }: &Resources,
+    ) {
         // Only render valid frames. See resize method.
         if let Some(active) = active {
             if *active >= *frame_num {
-                queue.submit(std::iter::once(encoder.finish()));
                 return;
             }
         } else {
-            queue.submit(std::iter::once(encoder.finish()));
             return;
         }
 
-        if !pause {
-            queue.submit(std::iter::once(encoder.finish()));
-
-            // Set internal count to correct value
-            block_on(async {
-                let buffer_slice = flow_uniform_buffer.slice(..);
-                let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
-                device.poll(wgpu::Maintain::Wait);
-
-                buffer_future.await.unwrap();
-                let buffer = buffer_slice.get_mapped_range();
-
-                let (_, raw, _) = unsafe { buffer.align_to::<flow::Uniforms>() };
-
-                *flow_count = raw[0].ct;
-
-                drop(buffer);
-                flow_uniform_buffer.unmap();
-            });
-        }
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("COMPUTE ENCODER"),
         });
@@ -288,8 +295,6 @@ impl FlowWorld {
         }
 
         queue.submit(std::iter::once(encoder.finish()));
-
-        assert!(*flow_count <= flow::MAX_NUM_FLOW as u32);
     }
 
     pub fn new(
@@ -306,9 +311,12 @@ impl FlowWorld {
 
         // SHADER LOADING
         dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
-        let flow_cs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
-        let flow_vs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.vert.spv"));
-        let flow_fs_module = device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
+        let flow_cs_module =
+            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
+        let flow_vs_module =
+            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.vert.spv"));
+        let flow_fs_module =
+            device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
 
         // UNIFORMS
         dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
@@ -861,6 +869,51 @@ impl FlowWorld {
             manipulator_buffer,
             accu_coll_buffer,
             accumulator_buffer,
+        }
+    }
+}
+
+unsafe impl World for Executor<Flow> {
+    /// Runs internal resize functions
+    fn run_resize(&self, Resources { queue, sc_desc, .. }: &Resources) {
+        let flow = self.get_mut();
+        // Probably doesn't need to be moved to internal functions because this is simple
+        flow.camera.asp = sc_desc.width as f32 / sc_desc.height as f32;
+
+        flow.view_uniforms.update_view_proj(&flow.camera);
+        queue.write_buffer(
+            &flow.view_uniform_buffer,
+            offset_of!(view2d::Uniforms, view_pos) as _,
+            bytemuck::cast_slice(&[flow.view_uniforms]),
+        );
+    }
+
+    /// Runs internal update functions
+    fn run_update(&self, resources: &Resources) {
+        //
+        util::spawn(|| Flow::update_info(self.get_mut(), resources));
+        util::join();
+        //
+        util::spawn(|| Flow::update_camera(self.get_mut(), resources));
+        util::spawn(|| Flow::update_flow_world(self.get_mut(), resources));
+        util::join();
+        //
+        util::spawn(|| Flow::update_flow_count(self.get_mut(), resources));
+        util::join();
+    }
+
+    /// Runs internal render functions
+    fn run_render(&self, resources: &Resources) {
+        //
+        util::spawn(|| Flow::render_flow_world(self.get_mut(), resources));
+        util::join();
+    }
+}
+
+impl Executor<Flow> {
+    pub fn new(resources: &Resources) -> Self {
+        Self {
+            world: UnsafeCell::new(Flow::new(resources)),
         }
     }
 }
