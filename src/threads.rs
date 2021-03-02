@@ -334,8 +334,7 @@ impl ThreadPoolSharedData {
     /// Notify all observers joining this pool if there is no more work to do.
     fn no_work_notify_all(&self) {
         if !self.has_work() {
-            self
-                .empty_trigger
+            self.empty_trigger
                 .lock()
                 .expect("Unable to notify all joining threads");
             self.empty_condvar.notify_all();
@@ -616,7 +615,9 @@ impl ThreadPool {
     /// ```
     pub fn join(&self) {
         // fast path requires no mutex
-        if !self.shared_data.has_work() {return;}
+        if !self.shared_data.has_work() {
+            return;
+        }
 
         let generation = self.shared_data.join_generation.load(Ordering::SeqCst);
         let mut lock = self.shared_data.empty_trigger.lock().unwrap();
@@ -1180,8 +1181,7 @@ mod test {
                     });
                 }
                 drop(tx);
-                rx.iter()
-                    .sum::<usize>()
+                rx.iter().sum::<usize>()
             })
         };
         let t1 = {
@@ -1197,8 +1197,7 @@ mod test {
                     });
                 }
                 drop(tx);
-                rx.iter()
-                    .product::<usize>()
+                rx.iter().product::<usize>()
             })
         };
 

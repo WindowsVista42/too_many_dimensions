@@ -10,9 +10,9 @@ use winit::window::WindowBuilder;
 
 use flow_world::*;
 
-use crate::resources::Resources;
 use crate::config::GlobalConfig;
-use crate::util::{Mastermind, Executor};
+use crate::resources::Resources;
+use crate::util::{Executor, Mastermind};
 
 #[macro_use]
 extern crate log;
