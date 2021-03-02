@@ -1,44 +1,29 @@
 #![feature(const_ptr_offset_from, const_maybe_uninit_as_ptr, const_raw_ptr_deref)]
+#![windows_subsystem = "windows"]
 
 use std::fs;
 use std::io::Read;
 
-use serde::{Deserialize, Serialize};
 use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 
 use flow_world::*;
-use mastermind::Mastermind;
 
 use crate::resources::Resources;
-
-macro_rules! dinfo {
-    ($($arg:tt)*) => {
-        log!(log::Level::Info, "{}\nLOCATION : {}:{}:{}\n", format!($($arg)*), file!(), line!(), column!());
-    };
-}
+use crate::config::GlobalConfig;
+use crate::util::{Mastermind, Executor};
 
 #[macro_use]
 extern crate log;
 
+mod config;
 mod flow;
 mod flow_world;
-mod mastermind;
 mod resources;
+mod threads;
+mod util;
 mod view2d;
-
-#[derive(Debug, Serialize, Deserialize)]
-// TODO: Add pretty printing
-pub struct GlobalConfig {
-    window: WindowConfig,
-    flow: flow::Uniforms,
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct WindowConfig {
-    msaa: u32,
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let p_st = std::time::Instant::now();
@@ -89,11 +74,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         resources: Resources::new(window, global_config),
         world: None,
     };
-    mastermind.world = Some(Box::new(FlowWorld::new(&mastermind.resources)));
+    mastermind.world = Some(Box::new(Executor::<Flow>::new(&mastermind.resources)));
     dinfo!("State End ({} ms)", now.elapsed().as_millis());
 
     event_loop.run(move |event, _, control_flow| {
-        mastermind.update(&event);
+        mastermind.resources.update_events(&event);
         if mastermind.resources.quit {
             *control_flow = ControlFlow::Exit;
             if !exited {
@@ -131,7 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 mastermind.resources.toggle_fullscreen();
             }
             Event::RedrawRequested(_) => {
-                mastermind.render();
+                mastermind.update();
             }
             Event::WindowEvent {
                 event: WindowEvent::Resized(physical_size),

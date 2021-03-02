@@ -1,9 +1,10 @@
+use crate::dinfo;
 use pollster::block_on;
 use winit::event::{Event, VirtualKeyCode};
 use winit::window::Window;
 use winit_input_helper::WinitInputHelper;
 
-use crate::GlobalConfig;
+use crate::config::GlobalConfig;
 
 /// Global constant resources
 /// Different worlds will share these
@@ -130,7 +131,7 @@ impl Resources {
         s
     }
 
-    pub fn update(&mut self, event: &Event<()>) {
+    pub fn update_events(&mut self, event: &Event<()>) {
         if self.input.update(event) {
             if self.input.key_pressed(VirtualKeyCode::Escape) || self.input.quit() {
                 self.quit = true;
