@@ -131,11 +131,16 @@ pub struct Atomics {
 /// FlowManipulators and FlowCollectors
 pub struct Collider {
     /// Collider position
-    // fucking graphics card wants its shit like this so we'll fucking do it for you then
     pub x: f32,
     pub y: f32,
     /// Collider collision radius
     pub r2: f32,
+}
+
+pub struct Colliders {
+    pub x: wgpu::Buffer,
+    pub y: wgpu::Buffer,
+    pub r2: wgpu::Buffer,
 }
 
 #[repr(C)]
