@@ -16,7 +16,7 @@ codegen-units = 64
 rpath = false
 
 [profile.release]
-# lto = true
+lto = true
 # panic = 'unwind'
 # codegen-units = 1
 

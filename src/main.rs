@@ -12,7 +12,9 @@ use flow_world::*;
 
 use crate::config::GlobalConfig;
 use crate::resources::Resources;
-use crate::util::{Executor, Mastermind};
+use crate::util2::{Executor, Mastermind};
+
+static NOW: std::time::Instant = std::time::Instant::now();
 
 #[macro_use]
 extern crate log;
@@ -22,12 +24,10 @@ mod flow;
 mod flow_world;
 mod resources;
 mod threads;
-mod util;
+mod util2;
 mod view2d;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let p_st = std::time::Instant::now();
-
     flexi_logger::Logger::with(
         flexi_logger::LogSpecification::default(flexi_logger::LevelFilter::max()).build(),
     )
@@ -49,14 +49,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         chrono::Local::now().format("%Y-%m-%d_%H-%M-%S")
     );
 
-    dinfo!("Program Start ({} ms)", p_st.elapsed().as_millis());
+    dinfo!("Program Start ({} ms)", NOW.elapsed().as_millis());
 
     dinfo!("Config Start");
-    let now = std::time::Instant::now();
     let mut conf_str = String::new();
     fs::File::open("config/config.toml")?.read_to_string(&mut conf_str)?;
     let global_config: GlobalConfig = toml::from_str(conf_str.as_str())?;
-    dinfo!("Config End ({} ms)", now.elapsed().as_millis());
+    dinfo!("Config End ({} ms)", NOW.elapsed().as_millis());
 
     let mut exited = false;
     let event_loop = EventLoop::new();
@@ -75,14 +74,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         world: None,
     };
     mastermind.world = Some(Box::new(Executor::<Flow>::new(&mastermind.resources)));
-    dinfo!("State End ({} ms)", now.elapsed().as_millis());
+    dinfo!("State End ({} ms)", NOW.elapsed().as_millis());
 
     event_loop.run(move |event, _, control_flow| {
         mastermind.resources.update_events(&event);
         if mastermind.resources.quit {
             *control_flow = ControlFlow::Exit;
             if !exited {
-                dinfo!("Program Close ({} s)", p_st.elapsed().as_secs());
+                dinfo!("Program Close ({} s)", NOW.elapsed().as_secs());
                 exited = true;
             }
             return;
