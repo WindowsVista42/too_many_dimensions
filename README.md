@@ -1,2 +1,2 @@
 # too_many_dimensions
-fun toy to mess around with flow fields
+toy to mess around with flow fields on the gpu
