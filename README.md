@@ -1,3 +1,2 @@
 # too_many_dimensions
-game  
-gonna be fun to make
+fun toy to mess around with flow fields
