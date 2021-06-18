@@ -32,6 +32,9 @@ fn zero_f32() -> f32 {
 // Will probably have to add more in the future
 pub struct Uniforms {
     #[serde(default = "zero_f32", skip)]
+    /// Simulation total time
+    pub tt: f32,
+    #[serde(default = "zero_f32", skip)]
     /// Simulation delta time
     pub dt: f32,
     #[serde(rename = "flow_initial_count")]
@@ -135,12 +138,6 @@ pub struct Collider {
     pub y: f32,
     /// Collider collision radius
     pub r2: f32,
-}
-
-pub struct Colliders {
-    pub x: wgpu::Buffer,
-    pub y: wgpu::Buffer,
-    pub r2: wgpu::Buffer,
 }
 
 #[repr(C)]

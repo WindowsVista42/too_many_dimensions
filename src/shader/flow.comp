@@ -89,6 +89,7 @@ struct Accumulator {
 
 // Ref Uniforms in flow.rs
 layout(std140, set = 0, binding = 0) uniform Uniforms {
+    float tt;
     float dt;
     uint  ct;
 
@@ -191,8 +192,8 @@ void main() {
         + ((coll_pos.y - vpos.y) * (coll_pos.y - vpos.y));
 
         // Early return, effectively deleting the particle
-        // TODO: Count this towards some objective, likely in a uniform
         if (prod2 < coll_rad2) {
+            // TODO: Count this towards some objective, likely in a uniform
             if(prod2 < coll_rad2 * 0.0625) { return; }
             const vec2 force_dir = -vec2(vpos.x - coll_pos.x, vpos.y - coll_pos.y);
 
