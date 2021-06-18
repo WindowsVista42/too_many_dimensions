@@ -6,8 +6,8 @@ use winit::event::VirtualKeyCode;
 
 use crate::dinfo;
 use crate::resources::Resources;
-use crate::util;
-use crate::util::{Executor, MultiRef, World};
+use crate::util2;
+use crate::util2::{Executor, MultiRef, World};
 use crate::{flow, view2d};
 use pollster::block_on;
 use std::cell::UnsafeCell;
@@ -328,12 +328,11 @@ impl Flow {
             ..
         }: &Resources,
     ) -> Self {
-        let now = std::time::Instant::now();
         // CONFIG
         let sample_count = global_config.window.msaa;
 
         // SHADER LOADING
-        dinfo!("Shader Loading ({} ms)", now.elapsed().as_millis());
+        dinfo!("Shader Loading ({} ms)", NOW.elapsed().as_millis());
         let flow_cs_module =
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.comp.spv"));
         let flow_vs_module =
@@ -342,7 +341,7 @@ impl Flow {
             device.create_shader_module(&wgpu::include_spirv!("../spirv/flow.frag.spv"));
 
         // UNIFORMS
-        dinfo!("View Uniforms ({} ms)", now.elapsed().as_millis());
+        dinfo!("View Uniforms ({} ms)", NOW.elapsed().as_millis());
         let camera = view2d::Camera {
             slow_spd: 1.5,
             fast_spd_fac: 2.0,
@@ -387,7 +386,7 @@ impl Flow {
         });
 
         // FLOW
-        dinfo!("Flow ({} ms)", now.elapsed().as_millis());
+        dinfo!("Flow ({} ms)", NOW.elapsed().as_millis());
         let flow_uniforms = global_config.flow;
         let flow_uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("FLOW SIM DATA"),
@@ -901,22 +900,22 @@ unsafe impl World for Executor<Flow> {
     /// Runs internal update functions
     fn run_update(&self, resources: &Resources) {
         //
-        util::spawn(|| Flow::update_info(self.get_mut(), resources));
-        util::join();
+        util2::spawn(|| Flow::update_info(self.get_mut(), resources));
+        util2::join();
         //
-        util::spawn(|| Flow::update_camera(self.get_mut(), resources));
-        util::spawn(|| Flow::update_flow_world(self.get_mut(), resources));
-        util::join();
+        util2::spawn(|| Flow::update_camera(self.get_mut(), resources));
+        util2::spawn(|| Flow::update_flow_world(self.get_mut(), resources));
+        util2::join();
         //
-        util::spawn(|| Flow::update_flow_count(self.get_mut(), resources));
-        util::join();
+        util2::spawn(|| Flow::update_flow_count(self.get_mut(), resources));
+        util2::join();
     }
 
     /// Runs internal render functions
     fn run_render(&self, resources: &Resources) {
         //
-        util::spawn(|| Flow::render_flow_world(self.get_mut(), resources));
-        util::join();
+        util2::spawn(|| Flow::render_flow_world(self.get_mut(), resources));
+        util2::join();
     }
 }
 

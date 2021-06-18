@@ -47,7 +47,6 @@ pub struct Resources {
 
 impl Resources {
     pub fn new(window: Window, global_config: GlobalConfig) -> Self {
-        let now = std::time::Instant::now();
         // CONFIG
         let sample_count = global_config.window.msaa;
 
@@ -58,7 +57,7 @@ impl Resources {
         let fullscreen = window.fullscreen().is_some();
 
         // INSTANCE
-        dinfo!("Instance ({} ms)", now.elapsed().as_millis());
+        dinfo!("Instance ({} ms)", NOW.elapsed().as_millis());
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::BackendBit::VULKAN);
         let surface = unsafe { instance.create_surface(&window) };
@@ -124,7 +123,7 @@ impl Resources {
 
         dinfo!(
             "Multisampled Framebuffer ({} ms)",
-            now.elapsed().as_millis()
+            NOW.elapsed().as_millis()
         );
         s.create_multisampled_framebuffer();
 
