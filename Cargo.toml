@@ -16,9 +16,9 @@ codegen-units = 64
 rpath = false
 
 [profile.release]
-# lto = true
-# panic = 'unwind'
-# codegen-units = 1
+lto = true
+panic = 'unwind'
+codegen-units = 1
 
 [build-dependencies]
 anyhow = "1.0.38"
@@ -41,7 +41,6 @@ num_cpus = "1.13.0"
 pollster = "0.2.1"
 rand = "0.8.1"
 rand_xorshift = "0.3.0"
-rayon = "1.5.0"
 serde = { version = "1.0.123", features = ["derive"] }
 toml = "0.5.8"
 wgpu = { version = "0.7.0" }
