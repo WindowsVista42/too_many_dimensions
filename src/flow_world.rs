@@ -1,7 +1,6 @@
 use memoffset::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
-use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
 
@@ -23,7 +22,6 @@ pub struct Flow {
     // FLOW
     pub flow_compute_pipeline: wgpu::ComputePipeline,
     pub flow_render_pipeline: wgpu::RenderPipeline,
-    pub flow_uniforms: flow::Uniforms,
     pub flow_uniform_buffer: wgpu::Buffer,
     pub flow_atomics: flow::Atomics,
     pub flow_atomic_buffer: wgpu::Buffer,
@@ -57,17 +55,42 @@ pub struct Flow {
 
 impl Flow {
     #[inline]
+    pub fn resize(
+        Self {
+            camera,
+            view_uniforms,
+            view_uniform_buffer,
+            ..
+        }: &mut Self,
+        Resources { queue, sc_desc, .. }: &Resources,
+    ) {
+        camera.asp = sc_desc.width as f32 / sc_desc.height as f32;
+
+        view_uniforms.update_view_proj(&camera);
+        queue.write_buffer(
+            &view_uniform_buffer,
+            offset_of!(view2d::Uniforms, view_pos) as _,
+            bytemuck::cast_slice(&[*view_uniforms]),
+        );
+    }
+
+    #[inline]
     pub fn update_info(
         Self {
             flow_uniform_buffer,
             ..
         }: &mut Self,
-        Resources { delta, queue, .. }: &Resources,
+        Resources {
+            delta,
+            elapsed_time,
+            queue,
+            ..
+        }: &Resources,
     ) {
         queue.write_buffer(
             flow_uniform_buffer,
-            offset_of!(flow::Uniforms, dt) as _,
-            bytemuck::cast_slice(&[*delta]),
+            offset_of!(flow::Uniforms, tt) as _,
+            bytemuck::cast_slice(&[elapsed_time.as_secs_f32(), *delta]),
         );
     }
 
@@ -641,7 +664,7 @@ impl Flow {
             flow::MAX_NUM_FLOW as _
         ];
         initial_flow_data
-            .par_chunks_mut((flow_uniforms.ct / 32) as usize)
+            .chunks_mut((flow_uniforms.ct / 32) as usize)
             .enumerate()
             .for_each(|(i, c)| {
                 let mut xsrng = XorShiftRng::seed_from_u64(i as _);
@@ -655,32 +678,11 @@ impl Flow {
                 }
             });
 
-        let (init_spaw_coll, mut init_mani_coll, mut init_accu_coll) = (
-            // Spawner 'Colliders'
-            vec![flow::SpawnerCollider { rte: 1.0 }; flow::MAX_NUM_SPAW],
-            // Manipulators
-            vec![
-                flow::Collider {
-                    x: 0.0,
-                    y: 0.0,
-                    r2: 2.0,
-                };
-                flow::MAX_NUM_MANI
-            ],
-            // Accumulators
-            vec![
-                flow::Collider {
-                    x: 0.0,
-                    y: 0.0,
-                    r2: 4.0,
-                };
-                flow::MAX_NUM_ACCU
-            ],
-        );
-
         let rand_num: u64 = rand::prelude::thread_rng().gen();
 
         // Spawners
+        let init_spaw_coll = vec![flow::SpawnerCollider { rte: 1.0 }; flow::MAX_NUM_SPAW];
+
         let mut init_spawner_data = vec![
             flow::Spawner {
                 x: 0.0,
@@ -693,6 +695,7 @@ impl Flow {
             };
             flow::MAX_NUM_SPAW
         ];
+
         init_spawner_data.iter_mut().enumerate().for_each(|(i, p)| {
             let mut xsrng = XorShiftRng::seed_from_u64(i as u64 + rand_num);
             let flow_ext = flow_uniforms.flow_ext;
@@ -715,6 +718,15 @@ impl Flow {
         });
 
         // Manipulators
+        let mut init_mani_coll = vec![
+            flow::Collider {
+                x: 0.0,
+                y: 0.0,
+                r2: 2.0,
+            };
+            flow::MAX_NUM_MANI
+        ];
+
         init_mani_coll.iter_mut().enumerate().for_each(|(i, p)| {
             let mut xsrng = XorShiftRng::seed_from_u64(i as u64 + rand_num);
             let flow_ext = flow_uniforms.flow_ext;
@@ -747,9 +759,16 @@ impl Flow {
         });
 
         // Accumulators
-        // WHAT THE ACTUAL FUCK IS THIS DOING
+        let mut init_accu_coll = vec![
+            flow::Collider {
+                x: 0.0,
+                y: 0.0,
+                r2: 4.0,
+            };
+            flow::MAX_NUM_ACCU
+        ];
+
         let mut xsrng = XorShiftRng::seed_from_u64(rand_num);
-        //let mut xsrng = rand::prelude::thread_rng();
         init_accu_coll.iter_mut().for_each(|p| {
             let flow_ext = flow_uniforms.flow_ext - 2.0;
             p.x = xsrng.gen_range((-flow_ext)..(flow_ext)); // posx
@@ -848,7 +867,6 @@ impl Flow {
             // FLOW
             flow_compute_pipeline,
             flow_render_pipeline,
-            flow_uniforms,
             flow_uniform_buffer,
             flow_atomics,
             flow_atomic_buffer,
@@ -875,17 +893,9 @@ impl Flow {
 
 unsafe impl World for Executor<Flow> {
     /// Runs internal resize functions
-    fn run_resize(&self, Resources { queue, sc_desc, .. }: &Resources) {
-        let flow = self.get_mut();
-        // Probably doesn't need to be moved to internal functions because this is simple
-        flow.camera.asp = sc_desc.width as f32 / sc_desc.height as f32;
-
-        flow.view_uniforms.update_view_proj(&flow.camera);
-        queue.write_buffer(
-            &flow.view_uniform_buffer,
-            offset_of!(view2d::Uniforms, view_pos) as _,
-            bytemuck::cast_slice(&[flow.view_uniforms]),
-        );
+    fn run_resize(&self, resources: &Resources) {
+        Flow::resize(self.get_mut(), resources);
+        Flow::render_flow_world(self.get_mut(), resources);
     }
 
     /// Runs internal update functions
