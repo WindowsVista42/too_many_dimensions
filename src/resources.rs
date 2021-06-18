@@ -5,6 +5,7 @@ use winit::window::Window;
 use winit_input_helper::WinitInputHelper;
 
 use crate::config::GlobalConfig;
+use crate::NOW;
 
 /// Global constant resources
 /// Different worlds will share these

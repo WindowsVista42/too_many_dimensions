@@ -13,8 +13,9 @@ use flow_world::*;
 use crate::config::GlobalConfig;
 use crate::resources::Resources;
 use crate::util2::{Executor, Mastermind};
+use once_cell::sync::Lazy;
 
-static NOW: std::time::Instant = std::time::Instant::now();
+pub static NOW: Lazy<std::time::Instant> = Lazy::new(std::time::Instant::now);
 
 #[macro_use]
 extern crate log;
@@ -67,7 +68,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     dinfo!("Window Created");
 
-    let now = std::time::Instant::now();
     dinfo!("State Start");
     let mut mastermind = Mastermind {
         resources: Resources::new(window, global_config),

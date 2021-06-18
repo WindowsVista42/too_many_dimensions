@@ -5,6 +5,7 @@ use wgpu::util::DeviceExt;
 use winit::event::VirtualKeyCode;
 
 use crate::dinfo;
+use crate::NOW;
 use crate::resources::Resources;
 use crate::util2;
 use crate::util2::{Executor, MultiRef, World};
@@ -654,7 +655,7 @@ impl Flow {
             usage: wgpu::BufferUsage::INDEX | wgpu::BufferUsage::COPY_DST,
         });
 
-        dinfo!("Initial Flow Data ({} ms)", now.elapsed().as_millis());
+        dinfo!("Initial Flow Data ({} ms)", NOW.elapsed().as_millis());
         let mut initial_flow_data = vec![
             flow::Particle {
                 pos: [0.0, 0.0],
