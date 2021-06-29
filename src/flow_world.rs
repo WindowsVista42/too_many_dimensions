@@ -115,23 +115,26 @@ impl Flow {
         {
             let mut cam_pos_delta = glam::Vec2::zero();
             if input.key_held(VirtualKeyCode::A) {
-                cam_pos_delta.x -= camera.slow_spd;
+                cam_pos_delta.x -= 1.0;
             }
             if input.key_held(VirtualKeyCode::D) {
-                cam_pos_delta.x += camera.slow_spd;
+                cam_pos_delta.x += 1.0;
             }
             if input.key_held(VirtualKeyCode::S) {
-                cam_pos_delta.y -= camera.slow_spd;
+                cam_pos_delta.y -= 1.0;
             }
             if input.key_held(VirtualKeyCode::W) {
-                cam_pos_delta.y += camera.slow_spd;
+                cam_pos_delta.y += 1.0;
             }
             if cam_pos_delta != glam::Vec2::zero() {
                 changed = true;
-                cam_pos_delta = cam_pos_delta.normalize() * *delta;
+                cam_pos_delta = cam_pos_delta.normalize() * *delta * camera.spd;
 
                 if input.key_held(VirtualKeyCode::LShift) {
                     cam_pos_delta *= camera.fast_spd_fac;
+                }
+                if input.key_held(VirtualKeyCode::LControl) {
+                    cam_pos_delta *= camera.slow_spd_fac;
                 }
 
                 camera.pos += cam_pos_delta;
@@ -344,7 +347,8 @@ impl Flow {
         // UNIFORMS
         dinfo!("View Uniforms ({} ms)", NOW.elapsed().as_millis());
         let camera = view2d::Camera {
-            slow_spd: 1.5,
+            slow_spd_fac: 0.5,
+            spd: 8.0,
             fast_spd_fac: 2.0,
             pos: glam::Vec2::zero(),
             scl: 1.0,

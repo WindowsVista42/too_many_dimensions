@@ -16,9 +16,8 @@ codegen-units = 64
 rpath = false
 
 [profile.release]
-lto = true
 panic = 'unwind'
-codegen-units = 1
+codegen-units = 8
 
 [build-dependencies]
 anyhow = "1.0.38"

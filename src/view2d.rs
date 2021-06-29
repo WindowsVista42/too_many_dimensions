@@ -4,7 +4,8 @@ use bytemuck::{Pod, Zeroable};
 /// Top-down 2D camera
 pub struct Camera {
     // Movement
-    pub slow_spd: f32,
+    pub slow_spd_fac: f32,
+    pub spd: f32,
     pub fast_spd_fac: f32,
     // Camera
     pub pos: glam::Vec2,
