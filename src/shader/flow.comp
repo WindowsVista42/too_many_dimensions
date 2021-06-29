@@ -1,5 +1,7 @@
 #version 460
 
+//#extension GL_EXT_nonuniform_qualifier : require
+
 // flow.rs
 #define MAX_SPAW 200
 #define MAX_MANI 200
@@ -125,10 +127,10 @@ layout(set = 0, binding = 1) buffer Atomics {
 
 /// Ref Particle in flow.rs
 layout(set = 0, binding = 2) buffer SrcParticles {
-    Particle src[MAX_FLOW];
+    Particle src[];
 };
 layout(set = 0, binding = 3) buffer DstParticles {
-    Particle dst[MAX_FLOW];
+    Particle dst[];
 };
 
 // Ref SpawnerCollider and Spawner in flow.rs
