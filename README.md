@@ -1,6 +1,6 @@
 # too_many_dimensions
 toy to mess around with flow fields on the gpu  
-this code is some of my earlier work and its really messy, but i think its a fun showcase of flowfields  
+this code is some of my earlier work and its really messy, but i think its a fun showcase of flowfields so i'm keeping it here  
 
 ## run
 run with ```cargo +nightly run --release```
