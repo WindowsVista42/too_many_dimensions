@@ -5,9 +5,8 @@ Toy to mess around with flow fields on the gpu.
 
 ## Info
 
-I wrote the majority of this code a while ago and in turn, it's not my best work.  
-In spite of that, I'm keeping this here because I think flow fields are fun, and maybe someone can benefit from what I've done.  
-This also uses a very early version of my game (sorta) framework/engine, which again, makes this a fun thing to look back to.  
+I wrote the majority of this code a while back and though it would be fun to share.  
+A lot of it is super messy however, so don't go using at a benchmark on how to program something like this.  
 
 Made using [wpgu](https://crates.io/crates/wgpu)
 
