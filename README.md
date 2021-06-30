@@ -28,3 +28,4 @@ Also, some of the settings don't do anything because I was planning to do someth
 
 ## Logging
 Program logs are recorded in `log/`
+These logs are compressed after the first two runs and logs more than 15 runs ago are deleted.
