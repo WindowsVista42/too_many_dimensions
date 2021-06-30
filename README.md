@@ -27,5 +27,5 @@ All of the settings are configurable in `config/config.toml`
 Also, some of the settings don't do anything because I was planning to do something with them but never got around to it.  
 
 ## Logging
-Program logs are recorded in `log/`
+Program logs are recorded in `log/`  
 These logs are compressed after the first two runs and logs more than 15 runs ago are deleted.
