@@ -1,10 +1,10 @@
 # too_many_dimensions
 Toy to mess around with flow fields on the gpu.  
 
-## Video
-https://user-images.githubusercontent.com/34073738/123766954-bcd48f00-d88c-11eb-8386-34a5ee2376c9.mp4
+<img width="320px" src="https://user-images.githubusercontent.com/34073738/123915518-34b2c000-d946-11eb-8b8b-17e610b7f0cf.gif">
 
 ## Info
+
 I wrote the majority of this code a while ago and in turn, it's not my best work.  
 In spite of that, I'm keeping this here because I think flow fields are fun, and maybe someone can benefit from what I've done.  
 This also uses a very early version of my game (sorta) framework/engine, which again, makes this a fun thing to look back to.  
