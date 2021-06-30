@@ -25,6 +25,7 @@ run with `cargo +nightly run --release`
 ## Config
 All of the settings are configurable in `config/config.toml`  
 Also, some of the settings don't do anything because I was planning to do something with them but never got around to it.  
+If the simulation ends up running slow for you, decrease `flow_initial_count` in the config.
 
 ## Logging
 Program logs are recorded in `log/`  
