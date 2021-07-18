@@ -8,7 +8,7 @@ Toy to mess around with flow fields on the gpu.
 I wrote the majority of this code a while back and though it would be fun to share.  
 A lot of it is super messy however, so don't go using at a benchmark on how to program something like this.  
 
-Made using [wpgu](https://crates.io/crates/wgpu)
+Made using [wgpu](https://crates.io/crates/wgpu)
 
 ## Run
 run with `cargo +nightly run --release`  
